@@ -260,6 +260,24 @@ public:
 		return &DestNode( iNode, iLink );
 	}
 #endif
+
+	// bots needs: OZ's navigation array and its methods (bot_nav.cpp). The original keeps the
+	// array inside CGraph at +0x24, right after m_nRouteInfo: short[256][256][256] (32 MB, so
+	// WorldGraph is that big in .bss), one cell per 32 units of the +-4096 world, x major.
+	short m_NavArray[256][256][256]; // VERIFY name
+	float FConvertArrayToGlobal(int iIndex);
+	int FConvertGlobalToArray(float flCoord);
+	int BoundsCheck(int iIndex);
+	int FGetNavPropensity(int x, int y, int z);
+	bool FLoadBotNav(char* pszMapName);
+	void slurp_array(short (*pArray)[256][256], char* pszFile);
+	void parse_nav_line(short (*pArray)[256][256], char* pszLine);
+	void HalfNavArray();
+	void InitNavArray();
+	bool IsInWorld(Vector& vecOrigin);
+	void MarkLocationFavorable(Vector& vecOrigin);
+	void MarkLocationUnfavorable(Vector& vecOrigin);
+	void SaveNavToFile();
 };
 
 //=========================================================
