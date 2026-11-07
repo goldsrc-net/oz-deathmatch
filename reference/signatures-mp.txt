@@ -1,0 +1,642 @@
+?AccelerateThink@CApacheHVR@@AAEXXZ
+private: void __thiscall CApacheHVR::AccelerateThink(void)
+
+?ActiveThink@CBaseTurret@@QAEXXZ
+public: void __thiscall CBaseTurret::ActiveThink(void)
+
+?AngularMoveDone@CBaseToggle@@QAEXXZ
+public: void __thiscall CBaseToggle::AngularMoveDone(void)
+
+?AnimateThink@CControllerZapBall@@AAEXXZ
+private: void __thiscall CControllerZapBall::AnimateThink(void)
+
+?AnimateThink@CSprite@@QAEXXZ
+public: void __thiscall CSprite::AnimateThink(void)
+
+?AnimateUntilDead@CSprite@@QAEXXZ
+public: void __thiscall CSprite::AnimateUntilDead(void)
+
+?AttemptToMaterialize@CBasePlayerItem@@QAEXXZ
+public: void __thiscall CBasePlayerItem::AttemptToMaterialize(void)
+
+?AutoSearchThink@CBaseTurret@@QAEXXZ
+public: void __thiscall CBaseTurret::AutoSearchThink(void)
+
+?BeamBreakThink@CTripmineGrenade@@AAEXXZ
+private: void __thiscall CTripmineGrenade::BeamBreakThink(void)
+
+?BloodGush@CCineBlood@@QAEXXZ
+public: void __thiscall CCineBlood::BloodGush(void)
+
+?BloodStart@CCineBlood@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CCineBlood::BloodStart(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?BoltTouch@CCrossbowBolt@@AAEXPAVCBaseEntity@@@Z
+private: void __thiscall CCrossbowBolt::BoltTouch(class CBaseEntity *)
+
+?BoltTouch@CGrappleBolt@@AAEXPAVCBaseEntity@@@Z
+private: void __thiscall CGrappleBolt::BoltTouch(class CBaseEntity *)
+
+?BounceGibTouch@CGib@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CGib::BounceGibTouch(class CBaseEntity *)
+
+?BounceTouch@CControllerHeadBall@@AAEXPAVCBaseEntity@@@Z
+private: void __thiscall CControllerHeadBall::BounceTouch(class CBaseEntity *)
+
+?BounceTouch@CGrenade@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CGrenade::BounceTouch(class CBaseEntity *)
+
+?BreakTouch@CBreakable@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CBreakable::BreakTouch(class CBaseEntity *)
+
+?BubbleThink@CCrossbowBolt@@AAEXXZ
+private: void __thiscall CCrossbowBolt::BubbleThink(void)
+
+?BubbleThink@CFlyingCrowbar@@QAEXXZ
+public: void __thiscall CFlyingCrowbar::BubbleThink(void)
+
+?BubbleThink@CGrappleBolt@@AAEXXZ
+private: void __thiscall CGrappleBolt::BubbleThink(void)
+
+?ButtonBackHome@CBaseButton@@QAEXXZ
+public: void __thiscall CBaseButton::ButtonBackHome(void)
+
+?ButtonReturn@CBaseButton@@QAEXXZ
+public: void __thiscall CBaseButton::ButtonReturn(void)
+
+?ButtonSpark@CBaseButton@@QAEXXZ
+public: void __thiscall CBaseButton::ButtonSpark(void)
+
+?ButtonTouch@CBaseButton@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CBaseButton::ButtonTouch(class CBaseEntity *)
+
+?ButtonUse@CBaseButton@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CBaseButton::ButtonUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?CallBuildNodeGraph@CTestHull@@QAEXXZ
+public: void __thiscall CTestHull::CallBuildNodeGraph(void)
+
+?CallGoDown@CFuncPlat@@QAEXXZ
+public: void __thiscall CFuncPlat::CallGoDown(void)
+
+?CallHitBottom@CFuncPlat@@QAEXXZ
+public: void __thiscall CFuncPlat::CallHitBottom(void)
+
+?CallHitTop@CFuncPlat@@QAEXXZ
+public: void __thiscall CFuncPlat::CallHitTop(void)
+
+?CallMonsterThink@CBaseMonster@@QAEXXZ
+public: void __thiscall CBaseMonster::CallMonsterThink(void)
+
+?CanThink@CItemSoda@@QAEXXZ
+public: void __thiscall CItemSoda::CanThink(void)
+
+?CanTouch@CItemSoda@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CItemSoda::CanTouch(class CBaseEntity *)
+
+?ChangeFriction@CFrictionModifier@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CFrictionModifier::ChangeFriction(class CBaseEntity *)
+
+?CineThink@CCineMonster@@QAEXXZ
+public: void __thiscall CCineMonster::CineThink(void)
+
+?CineThink@CLegacyCineMonster@@QAEXXZ
+public: void __thiscall CLegacyCineMonster::CineThink(void)
+
+?CommandUse@COsprey@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall COsprey::CommandUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?CommandUse@CTentacle@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CTentacle::CommandUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?CorpseFallThink@CBaseMonster@@QAEXXZ
+public: void __thiscall CBaseMonster::CorpseFallThink(void)
+
+?CounterUse@CBaseTrigger@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CBaseTrigger::CounterUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?CrashTouch@CApache@@AAEXPAVCBaseEntity@@@Z
+private: void __thiscall CApache::CrashTouch(class CBaseEntity *)
+
+?CrashTouch@COsprey@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall COsprey::CrashTouch(class CBaseEntity *)
+
+?Cycle@CTentacle@@QAEXXZ
+public: void __thiscall CTentacle::Cycle(void)
+
+?CyclicUse@CMonsterMaker@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CMonsterMaker::CyclicUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?DamageThink@CLightning@@QAEXXZ
+public: void __thiscall CLightning::DamageThink(void)
+
+?DangerSoundThink@CGrenade@@QAEXXZ
+public: void __thiscall CGrenade::DangerSoundThink(void)
+
+?DartTouch@CHornet@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CHornet::DartTouch(class CBaseEntity *)
+
+?DeadEnd@CFuncTrackTrain@@QAEXXZ
+public: void __thiscall CFuncTrackTrain::DeadEnd(void)
+
+?DefaultTouch@CBasePlayerAmmo@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CBasePlayerAmmo::DefaultTouch(class CBaseEntity *)
+
+?DefaultTouch@CBasePlayerItem@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CBasePlayerItem::DefaultTouch(class CBaseEntity *)
+
+?DelayDeathThink@CTripmineGrenade@@AAEXXZ
+private: void __thiscall CTripmineGrenade::DelayDeathThink(void)
+
+?DelayThink@CBaseDelay@@QAEXXZ
+public: void __thiscall CBaseDelay::DelayThink(void)
+
+?DelayThink@CScriptedSentence@@QAEXXZ
+public: void __thiscall CScriptedSentence::DelayThink(void)
+
+?Deploy@CBaseTurret@@QAEXXZ
+public: void __thiscall CBaseTurret::Deploy(void)
+
+?DeployThink@COsprey@@QAEXXZ
+public: void __thiscall COsprey::DeployThink(void)
+
+?DestroyItem@CBasePlayerItem@@QAEXXZ
+public: void __thiscall CBasePlayerItem::DestroyItem(void)
+
+?Detonate@CGrenade@@QAEXXZ
+public: void __thiscall CGrenade::Detonate(void)
+
+?DetonateUse@CGrenade@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CGrenade::DetonateUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?Die@CBreakable@@QAEXXZ
+public: void __thiscall CBreakable::Die(void)
+
+?DieThink@CControllerHeadBall@@AAEXXZ
+private: void __thiscall CControllerHeadBall::DieThink(void)
+
+?DieThink@CTentacle@@QAEXXZ
+public: void __thiscall CTentacle::DieThink(void)
+
+?DieTouch@CHornet@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CHornet::DieTouch(class CBaseEntity *)
+
+?DoorGoDown@CBaseDoor@@QAEXXZ
+public: void __thiscall CBaseDoor::DoorGoDown(void)
+
+?DoorGoUp@CBaseDoor@@QAEXXZ
+public: void __thiscall CBaseDoor::DoorGoUp(void)
+
+?DoorHitBottom@CBaseDoor@@QAEXXZ
+public: void __thiscall CBaseDoor::DoorHitBottom(void)
+
+?DoorHitTop@CBaseDoor@@QAEXXZ
+public: void __thiscall CBaseDoor::DoorHitTop(void)
+
+?DoorTouch@CBaseDoor@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CBaseDoor::DoorTouch(class CBaseEntity *)
+
+?DragPlayer@CGrappleBolt@@AAEXXZ
+private: void __thiscall CGrappleBolt::DragPlayer(void)
+
+?DrawThink@CNodeViewer@@QAEXXZ
+public: void __thiscall CNodeViewer::DrawThink(void)
+
+?DropDelay@CTestHull@@QAEXXZ
+public: void __thiscall CTestHull::DropDelay(void)
+
+?DyingThink@CApache@@AAEXXZ
+private: void __thiscall CApache::DyingThink(void)
+
+?DyingThink@COsprey@@QAEXXZ
+public: void __thiscall COsprey::DyingThink(void)
+
+?EndSectionTouch@CTriggerEndSection@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CTriggerEndSection::EndSectionTouch(class CBaseEntity *)
+
+?EndSectionUse@CTriggerEndSection@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CTriggerEndSection::EndSectionUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?ExecuteChangeLevel@CChangeLevel@@QAEXXZ
+public: void __thiscall CChangeLevel::ExecuteChangeLevel(void)
+
+?ExpandThink@CSprite@@QAEXXZ
+public: void __thiscall CSprite::ExpandThink(void)
+
+?ExplodeThink@CCrossbowBolt@@AAEXXZ
+private: void __thiscall CCrossbowBolt::ExplodeThink(void)
+
+?ExplodeTouch@CControllerZapBall@@AAEXPAVCBaseEntity@@@Z
+private: void __thiscall CControllerZapBall::ExplodeTouch(class CBaseEntity *)
+
+?ExplodeTouch@CGrenade@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CGrenade::ExplodeTouch(class CBaseEntity *)
+
+?FallThink@CBasePlayerItem@@QAEXXZ
+public: void __thiscall CBasePlayerItem::FallThink(void)
+
+?FieldUse@CFuncMortarField@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CFuncMortarField::FieldUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?Find@CFuncTrackChange@@QAEXXZ
+public: void __thiscall CFuncTrackChange::Find(void)
+
+?Find@CFuncTrackTrain@@QAEXXZ
+public: void __thiscall CFuncTrackTrain::Find(void)
+
+?Find@CFuncTrainControls@@QAEXXZ
+public: void __thiscall CFuncTrainControls::Find(void)
+
+?FindAllThink@COsprey@@QAEXXZ
+public: void __thiscall COsprey::FindAllThink(void)
+
+?FindThink@CScriptedSentence@@QAEXXZ
+public: void __thiscall CScriptedSentence::FindThink(void)
+
+?FizzThink@CBubbling@@QAEXXZ
+public: void __thiscall CBubbling::FizzThink(void)
+
+?FlyThink@COsprey@@QAEXXZ
+public: void __thiscall COsprey::FlyThink(void)
+
+?FlyTouch@CApache@@AAEXPAVCBaseEntity@@@Z
+private: void __thiscall CApache::FlyTouch(class CBaseEntity *)
+
+?FollowTarget@CTriggerCamera@@QAEXXZ
+public: void __thiscall CTriggerCamera::FollowTarget(void)
+
+?FollowThink@CRpgRocket@@QAEXXZ
+public: void __thiscall CRpgRocket::FollowThink(void)
+
+?FollowerUse@CTalkMonster@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CTalkMonster::FollowerUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?GoDown@CFuncTrackChange@@UAEXXZ
+public: virtual void __thiscall CFuncTrackChange::GoDown(void)
+
+?GoUp@CFuncTrackChange@@UAEXXZ
+public: virtual void __thiscall CFuncTrackChange::GoUp(void)
+
+?GravityTouch@CTriggerGravity@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CTriggerGravity::GravityTouch(class CBaseEntity *)
+
+?HitTouch@COsprey@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall COsprey::HitTouch(class CBaseEntity *)
+
+?HitTouch@CTentacle@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CTentacle::HitTouch(class CBaseEntity *)
+
+?HoverThink@COsprey@@QAEXXZ
+public: void __thiscall COsprey::HoverThink(void)
+
+?HuntThink@CApache@@AAEXXZ
+private: void __thiscall CApache::HuntThink(void)
+
+?HuntThink@CControllerHeadBall@@AAEXXZ
+private: void __thiscall CControllerHeadBall::HuntThink(void)
+
+?HuntThink@CSqueakGrenade@@AAEXXZ
+private: void __thiscall CSqueakGrenade::HuntThink(void)
+
+?HurtTouch@CBaseTrigger@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CBaseTrigger::HurtTouch(class CBaseEntity *)
+
+?HurtTouch@CFuncRotating@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CFuncRotating::HurtTouch(class CBaseEntity *)
+
+?IgniteThink@CApacheHVR@@AAEXXZ
+private: void __thiscall CApacheHVR::IgniteThink(void)
+
+?IgniteThink@CRpgRocket@@QAEXXZ
+public: void __thiscall CRpgRocket::IgniteThink(void)
+
+?Initialize@CBaseTurret@@QAEXXZ
+public: void __thiscall CBaseTurret::Initialize(void)
+
+?ItemTouch@CItem@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CItem::ItemTouch(class CBaseEntity *)
+
+?Kill@CWeaponBox@@QAEXXZ
+public: void __thiscall CWeaponBox::Kill(void)
+
+?LinearMoveDone@CBaseToggle@@QAEXXZ
+public: void __thiscall CBaseToggle::LinearMoveDone(void)
+
+?LoadThink@CRevertSaved@@QAEXXZ
+public: void __thiscall CRevertSaved::LoadThink(void)
+
+?MakerThink@CMonsterMaker@@QAEXXZ
+public: void __thiscall CMonsterMaker::MakerThink(void)
+
+?ManagerThink@CMultiManager@@QAEXXZ
+public: void __thiscall CMultiManager::ManagerThink(void)
+
+?ManagerUse@CMultiManager@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CMultiManager::ManagerUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?Materialize@CBasePlayerAmmo@@QAEXXZ
+public: void __thiscall CBasePlayerAmmo::Materialize(void)
+
+?Materialize@CBasePlayerItem@@QAEXXZ
+public: void __thiscall CBasePlayerItem::Materialize(void)
+
+?Materialize@CItem@@QAEXXZ
+public: void __thiscall CItem::Materialize(void)
+
+?MessageThink@CRevertSaved@@QAEXXZ
+public: void __thiscall CRevertSaved::MessageThink(void)
+
+?MonsterInitThink@CBaseMonster@@QAEXXZ
+public: void __thiscall CBaseMonster::MonsterInitThink(void)
+
+?MonsterUse@CBaseMonster@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CBaseMonster::MonsterUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?MortarExplode@CMortar@@QAEXXZ
+public: void __thiscall CMortar::MortarExplode(void)
+
+?MultiTouch@CBaseTrigger@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CBaseTrigger::MultiTouch(class CBaseEntity *)
+
+?MultiWaitOver@CBaseTrigger@@QAEXXZ
+public: void __thiscall CBaseTrigger::MultiWaitOver(void)
+
+?NearestPath@CFuncTrackTrain@@QAEXXZ
+public: void __thiscall CFuncTrackTrain::NearestPath(void)
+
+?Next@CFuncTrackTrain@@QAEXXZ
+public: void __thiscall CFuncTrackTrain::Next(void)
+
+?Next@CFuncTrain@@QAEXXZ
+public: void __thiscall CFuncTrain::Next(void)
+
+?Next@CGunTarget@@QAEXXZ
+public: void __thiscall CGunTarget::Next(void)
+
+?NullThink@CApache@@AAEXXZ
+private: void __thiscall CApache::NullThink(void)
+
+?Off@CMomentaryRotButton@@QAEXXZ
+public: void __thiscall CMomentaryRotButton::Off(void)
+
+?Off@CRecharge@@QAEXXZ
+public: void __thiscall CRecharge::Off(void)
+
+?Off@CWallHealth@@QAEXXZ
+public: void __thiscall CWallHealth::Off(void)
+
+?PathFind@CTestHull@@QAEXXZ
+public: void __thiscall CTestHull::PathFind(void)
+
+?PendulumUse@CPendulum@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CPendulum::PendulumUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?PlatUse@CFuncPlat@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CFuncPlat::PlatUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?PlayerDeathThink@CBasePlayer@@QAEXXZ
+public: void __thiscall CBasePlayer::PlayerDeathThink(void)
+
+?PlayerStoppedThink@CGrappleBolt@@AAEXXZ
+private: void __thiscall CGrappleBolt::PlayerStoppedThink(void)
+
+?PowerupThink@CTripmineGrenade@@AAEXXZ
+private: void __thiscall CTripmineGrenade::PowerupThink(void)
+
+?PreDetonate@CGrenade@@QAEXXZ
+public: void __thiscall CGrenade::PreDetonate(void)
+
+?RadiationThink@CTriggerHurt@@QAEXXZ
+public: void __thiscall CTriggerHurt::RadiationThink(void)
+
+?RampThink@CAmbientGeneric@@QAEXXZ
+public: void __thiscall CAmbientGeneric::RampThink(void)
+
+?Recharge@CRecharge@@QAEXXZ
+public: void __thiscall CRecharge::Recharge(void)
+
+?Recharge@CWallHealth@@QAEXXZ
+public: void __thiscall CWallHealth::Recharge(void)
+
+?Register@CMultiSource@@QAEXXZ
+public: void __thiscall CMultiSource::Register(void)
+
+?Retire@CBaseTurret@@QAEXXZ
+public: void __thiscall CBaseTurret::Retire(void)
+
+?Return@CMomentaryRotButton@@QAEXXZ
+public: void __thiscall CMomentaryRotButton::Return(void)
+
+?Revive@CLaserSpot@@QAEXXZ
+public: void __thiscall CLaserSpot::Revive(void)
+
+?RocketTouch@CRpgRocket@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CRpgRocket::RocketTouch(class CBaseEntity *)
+
+?RopeTouch@CPendulum@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CPendulum::RopeTouch(class CBaseEntity *)
+
+?Rotate@CFuncRotating@@QAEXXZ
+public: void __thiscall CFuncRotating::Rotate(void)
+
+?RotatingUse@CFuncRotating@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CFuncRotating::RotatingUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?RuneThink@CRune@@QAEXXZ
+public: void __thiscall CRune::RuneThink(void)
+
+?SUB_CallUseToggle@CBaseEntity@@QAEXXZ
+public: void __thiscall CBaseEntity::SUB_CallUseToggle(void)
+
+?SUB_DoNothing@CBaseEntity@@QAEXXZ
+public: void __thiscall CBaseEntity::SUB_DoNothing(void)
+
+?SUB_FadeOut@CBaseEntity@@QAEXXZ
+public: void __thiscall CBaseEntity::SUB_FadeOut(void)
+
+?SUB_Remove@CBaseEntity@@QAEXXZ
+public: void __thiscall CBaseEntity::SUB_Remove(void)
+
+?SUB_StartFadeOut@CBaseEntity@@QAEXXZ
+public: void __thiscall CBaseEntity::SUB_StartFadeOut(void)
+
+?SatchelSlide@CSatchelCharge@@AAEXPAVCBaseEntity@@@Z
+private: void __thiscall CSatchelCharge::SatchelSlide(class CBaseEntity *)
+
+?SatchelThink@CSatchelCharge@@AAEXXZ
+private: void __thiscall CSatchelCharge::SatchelThink(void)
+
+?SaveTouch@CTriggerSave@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CTriggerSave::SaveTouch(class CBaseEntity *)
+
+?SearchThink@CBaseTurret@@QAEXXZ
+public: void __thiscall CBaseTurret::SearchThink(void)
+
+?SentryDeath@CSentry@@QAEXXZ
+public: void __thiscall CSentry::SentryDeath(void)
+
+?SentryTouch@CSentry@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CSentry::SentryTouch(class CBaseEntity *)
+
+?ShootThink@CGibShooter@@QAEXXZ
+public: void __thiscall CGibShooter::ShootThink(void)
+
+?ShowBadNode@CTestHull@@QAEXXZ
+public: void __thiscall CTestHull::ShowBadNode(void)
+
+?SlideTouch@CGrenade@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CGrenade::SlideTouch(class CBaseEntity *)
+
+?Smack@CCrowbar@@QAEXXZ
+public: void __thiscall CCrowbar::Smack(void)
+
+?Smoke@CEnvExplosion@@QAEXXZ
+public: void __thiscall CEnvExplosion::Smoke(void)
+
+?Smoke@CGrenade@@QAEXXZ
+public: void __thiscall CGrenade::Smoke(void)
+
+?SparkStart@CEnvSpark@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CEnvSpark::SparkStart(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?SparkStop@CEnvSpark@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CEnvSpark::SparkStop(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?SparkThink@CEnvSpark@@QAEXXZ
+public: void __thiscall CEnvSpark::SparkThink(void)
+
+?SpeakerThink@CSpeaker@@QAEXXZ
+public: void __thiscall CSpeaker::SpeakerThink(void)
+
+?SpinDown@CFuncRotating@@QAEXXZ
+public: void __thiscall CFuncRotating::SpinDown(void)
+
+?SpinDownCall@CBaseTurret@@UAEXXZ
+public: virtual void __thiscall CBaseTurret::SpinDownCall(void)
+
+?SpinTouch@CFlyingCrowbar@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CFlyingCrowbar::SpinTouch(class CBaseEntity *)
+
+?SpinUp@CFuncRotating@@QAEXXZ
+public: void __thiscall CFuncRotating::SpinUp(void)
+
+?SpinUpCall@CBaseTurret@@UAEXXZ
+public: virtual void __thiscall CBaseTurret::SpinUpCall(void)
+
+?Start@CGunTarget@@QAEXXZ
+public: void __thiscall CGunTarget::Start(void)
+
+?Start@CTentacle@@QAEXXZ
+public: void __thiscall CTentacle::Start(void)
+
+?StartDart@CHornet@@QAEXXZ
+public: void __thiscall CHornet::StartDart(void)
+
+?StartTrack@CHornet@@QAEXXZ
+public: void __thiscall CHornet::StartTrack(void)
+
+?StartupUse@CApache@@AAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+private: void __thiscall CApache::StartupUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?StaticDecal@CDecal@@QAEXXZ
+public: void __thiscall CDecal::StaticDecal(void)
+
+?StickyGibTouch@CGib@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CGib::StickyGibTouch(class CBaseEntity *)
+
+?Stop@CPendulum@@QAEXXZ
+public: void __thiscall CPendulum::Stop(void)
+
+?StrikeThink@CLaser@@QAEXXZ
+public: void __thiscall CLaser::StrikeThink(void)
+
+?StrikeThink@CLightning@@QAEXXZ
+public: void __thiscall CLightning::StrikeThink(void)
+
+?StrikeUse@CLightning@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CLightning::StrikeUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?SuperBounceTouch@CSqueakGrenade@@AAEXPAVCBaseEntity@@@Z
+private: void __thiscall CSqueakGrenade::SuperBounceTouch(class CBaseEntity *)
+
+?Swing@CPendulum@@QAEXXZ
+public: void __thiscall CPendulum::Swing(void)
+
+?SwingAgain@CCrowbar@@QAEXXZ
+public: void __thiscall CCrowbar::SwingAgain(void)
+
+?TankThink@CAirtank@@AAEXXZ
+private: void __thiscall CAirtank::TankThink(void)
+
+?TankTouch@CAirtank@@AAEXPAVCBaseEntity@@@Z
+private: void __thiscall CAirtank::TankTouch(class CBaseEntity *)
+
+?TeleportTouch@CBaseTrigger@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CBaseTrigger::TeleportTouch(class CBaseEntity *)
+
+?Test@CTentacle@@QAEXXZ
+public: void __thiscall CTentacle::Test(void)
+
+?TestThink@CTestEffect@@QAEXXZ
+public: void __thiscall CTestEffect::TestThink(void)
+
+?ToggleUse@CAmbientGeneric@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CAmbientGeneric::ToggleUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?ToggleUse@CBaseTrigger@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CBaseTrigger::ToggleUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?ToggleUse@CLightning@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CLightning::ToggleUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?ToggleUse@CMonsterMaker@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CMonsterMaker::ToggleUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?ToggleUse@CSpeaker@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CSpeaker::ToggleUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?Touch@CRune@@UAEXPAVCBaseEntity@@@Z
+public: virtual void __thiscall CRune::Touch(class CBaseEntity *)
+
+?TouchChangeLevel@CChangeLevel@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CChangeLevel::TouchChangeLevel(class CBaseEntity *)
+
+?TrackTarget@CHornet@@QAEXXZ
+public: void __thiscall CHornet::TrackTarget(void)
+
+?TrackTouch@CHornet@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CHornet::TrackTouch(class CBaseEntity *)
+
+?TriggerAndWait@CBaseButton@@QAEXXZ
+public: void __thiscall CBaseButton::TriggerAndWait(void)
+
+?TriggerDecal@CDecal@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CDecal::TriggerDecal(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?TriggerTouch@CBeam@@QAEXPAVCBaseEntity@@@Z
+public: void __thiscall CBeam::TriggerTouch(class CBaseEntity *)
+
+?TumbleThink@CGrenade@@QAEXXZ
+public: void __thiscall CGrenade::TumbleThink(void)
+
+?TurretDeath@CBaseTurret@@QAEXXZ
+public: void __thiscall CBaseTurret::TurretDeath(void)
+
+?TurretUse@CBaseTurret@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CBaseTurret::TurretUse(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?UseChangeLevel@CChangeLevel@@QAEXPAVCBaseEntity@@0W4USE_TYPE@@M@Z
+public: void __thiscall CChangeLevel::UseChangeLevel(class CBaseEntity *, class CBaseEntity *, enum USE_TYPE, float)
+
+?Wait@CFuncTrain@@QAEXXZ
+public: void __thiscall CFuncTrain::Wait(void)
+
+?Wait@CGunTarget@@QAEXXZ
+public: void __thiscall CGunTarget::Wait(void)
+
+?WaitTillLand@CGib@@QAEXXZ
+public: void __thiscall CGib::WaitTillLand(void)
+
+?WarningThink@CTripmineGrenade@@AAEXXZ
+private: void __thiscall CTripmineGrenade::WarningThink(void)
+
