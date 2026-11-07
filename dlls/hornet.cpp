@@ -24,12 +24,13 @@
 #include "soundent.h"
 #include "hornet.h"
 #include "gamerules.h"
+#include "game.h"
 
 
 int iHornetTrail;
 int iHornetPuff;
 
-LINK_ENTITY_TO_CLASS(hornet, CHornet);
+LINK_ENTITY_TO_CLASS(hornet, CHornet); // orig 0xc8da0
 
 //=========================================================
 // Save/Restore
@@ -41,11 +42,12 @@ TYPEDESCRIPTION CHornet::m_SaveData[] =
 		DEFINE_FIELD(CHornet, m_flFlySpeed, FIELD_FLOAT),
 };
 
-IMPLEMENT_SAVERESTORE(CHornet, CBaseMonster);
+IMPLEMENT_SAVERESTORE(CHornet, CBaseMonster); // Save orig 0xc8dc0, Restore orig 0xc8e10
 
 //=========================================================
 // don't let hornets gib, ever.
 //=========================================================
+// orig 0xc8e60
 bool CHornet::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
 {
 	// filter these bits a little.
@@ -57,6 +59,8 @@ bool CHornet::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float 
 
 //=========================================================
 //=========================================================
+// orig 0xc8ea0. Oz: speed_hornet_red and speed_hornet2 for the two types, damage_hornet whoever
+// fired it.
 void CHornet::Spawn()
 {
 	Precache();
@@ -82,12 +86,12 @@ void CHornet::Spawn()
 	if (RANDOM_LONG(1, 5) <= 2)
 	{
 		m_iHornetType = HORNET_TYPE_RED;
-		m_flFlySpeed = HORNET_RED_SPEED;
+		m_flFlySpeed = oz_speedhornet.value; // Oz variables (.value)
 	}
 	else
 	{
 		m_iHornetType = HORNET_TYPE_ORANGE;
-		m_flFlySpeed = HORNET_ORANGE_SPEED;
+		m_flFlySpeed = oz_speedhornet2.value; // Oz variables (.value)
 	}
 
 	SET_MODEL(ENT(pev), "models/hornet.mdl");
@@ -100,14 +104,15 @@ void CHornet::Spawn()
 	if (!pSoundEnt)
 		pSoundEnt = edict();
 
+	// Oz variables (.value): the same damage on both branches
 	if (!FNullEnt(pev->owner) && (pev->owner->v.flags & FL_CLIENT) != 0)
 	{
-		pev->dmg = gSkillData.plrDmgHornet;
+		pev->dmg = oz_damagehornet.value;
 	}
 	else
 	{
 		// no real owner, or owner isn't a client.
-		pev->dmg = gSkillData.monDmgHornet;
+		pev->dmg = oz_damagehornet.value;
 	}
 
 	pev->nextthink = gpGlobals->time + 0.1;
@@ -115,6 +120,7 @@ void CHornet::Spawn()
 }
 
 
+// orig 0xc90b0
 void CHornet::Precache()
 {
 	PRECACHE_MODEL("models/hornet.mdl");
@@ -138,6 +144,7 @@ void CHornet::Precache()
 //=========================================================
 // hornets will never get mad at each other, no matter who the owner is.
 //=========================================================
+// orig 0xc91c0
 int CHornet::IRelationship(CBaseEntity* pTarget)
 {
 	if (pTarget->pev->modelindex == pev->modelindex)
@@ -151,6 +158,7 @@ int CHornet::IRelationship(CBaseEntity* pTarget)
 //=========================================================
 // ID's Hornet as their owner
 //=========================================================
+// orig 0xc9210
 int CHornet::Classify()
 {
 
@@ -165,6 +173,7 @@ int CHornet::Classify()
 //=========================================================
 // StartTrack - starts a hornet out tracking its target
 //=========================================================
+// orig 0xc9250
 void CHornet::StartTrack()
 {
 	IgniteTrail();
@@ -178,6 +187,7 @@ void CHornet::StartTrack()
 //=========================================================
 // StartDart - starts a hornet out just flying straight.
 //=========================================================
+// orig 0xc92c0
 void CHornet::StartDart()
 {
 	IgniteTrail();
@@ -188,6 +198,7 @@ void CHornet::StartDart()
 	pev->nextthink = gpGlobals->time + 4;
 }
 
+// orig 0xc9330. Oz: the trail colours from color_*_hornet1 (red type) and color_*_hornet2.
 void CHornet::IgniteTrail()
 {
 	/*
@@ -227,14 +238,14 @@ old colors
 	switch (m_iHornetType)
 	{
 	case HORNET_TYPE_RED:
-		WRITE_BYTE(179); // r, g, b
-		WRITE_BYTE(39);	 // r, g, b
-		WRITE_BYTE(14);	 // r, g, b
+		WRITE_BYTE((int)oz_colorredhornet1.value);	 // r, g, b
+		WRITE_BYTE((int)oz_colorgreenhornet1.value); // r, g, b
+		WRITE_BYTE((int)oz_colorbluehornet1.value);	 // r, g, b
 		break;
 	case HORNET_TYPE_ORANGE:
-		WRITE_BYTE(255); // r, g, b
-		WRITE_BYTE(128); // r, g, b
-		WRITE_BYTE(0);	 // r, g, b
+		WRITE_BYTE((int)oz_colorredhornet2.value);	 // r, g, b
+		WRITE_BYTE((int)oz_colorgreenhornet2.value); // r, g, b
+		WRITE_BYTE((int)oz_colorbluehornet2.value);	 // r, g, b
 		break;
 	}
 
@@ -246,6 +257,7 @@ old colors
 //=========================================================
 // Hornet is flying, gently tracking target
 //=========================================================
+// orig 0xc9520
 void CHornet::TrackTarget()
 {
 	Vector vecFlightDir;
@@ -376,6 +388,7 @@ void CHornet::TrackTarget()
 //=========================================================
 // Tracking Hornet hit something
 //=========================================================
+// orig 0xc9ec0
 void CHornet::TrackTouch(CBaseEntity* pOther)
 {
 	if (pOther->edict() == pev->owner || pOther->pev->modelindex == pev->modelindex)
@@ -402,13 +415,18 @@ void CHornet::TrackTouch(CBaseEntity* pOther)
 	DieTouch(pOther);
 }
 
+// orig 0xca070
 void CHornet::DartTouch(CBaseEntity* pOther)
 {
 	DieTouch(pOther);
 }
 
+// orig 0xca0a0
 void CHornet::DieTouch(CBaseEntity* pOther)
 {
+	// halflife-updated's fix, kept: no damage without an owner (e7fb734, halflife#1598); the
+	// original passes a null attacker
+
 	//Only deal damage if the owner exists in this map.
 	//Hornets that transition without their owner (e.g. Alien Grunt) will otherwise pass a null pointer down to TakeDamage.
 	if (pOther && 0 != pOther->pev->takedamage && nullptr != pev->owner)

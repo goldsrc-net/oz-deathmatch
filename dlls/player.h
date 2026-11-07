@@ -365,6 +365,9 @@ public:
 	int m_iRuneHudTime;			 // Oz: orig +0x65c, VERIFY name; CItem::RuneHud sets 700, UpdateRuneInfo clears it
 	int m_iRune;				 // Oz: orig +0x674, VERIFY name; the rune held (RUNE_* in items.h), 0 for none
 	int m_iRandomRune;			 // Oz: orig +0x678, VERIFY name; 1 when the rune was a random one (RemoveRune then drops a random rune)
+
+	// weapons-b needs:
+	bool Flare = false; // orig +0x640: the hand grenade's next throw is a flare (1.7's "Oz flares" name). VERIFY name
 };
 
 inline void CBasePlayer::SetWeaponBit(int id)

@@ -20,8 +20,16 @@
 #include "player.h"
 #include "effects.h"
 #include "gamerules.h"
+#include "game.h"
 
 #define TRIPMINE_PRIMARY_VOLUME 450
+
+// Oz: the beam colour mode for the next beam made, one global for every mine (orig .data 0x16d5a0):
+// 1 black (the secondary attack's hidden beam), 2 color_*_tripmine, 3 random, 4-7 red, blue,
+// orange, green (unused). Set when a mine is placed, read when a beam is made (at power-up), so a
+// mine placed by anyone in between changes the colour of a mine still powering up (original bug,
+// kept).
+int tripmode = 0;
 
 #ifndef CLIENT_DLL
 
@@ -43,7 +51,7 @@ class CTripmineGrenade : public CGrenade
 	void EXPORT DelayDeathThink();
 	void Killed(entvars_t* pevAttacker, int iGib) override;
 
-	void MakeBeam();
+	void MakeBeam(int iMode); // iMode unused: the original reads the global tripmode
 	void KillBeam();
 
 	float m_flPowerUp;
@@ -58,7 +66,7 @@ class CTripmineGrenade : public CGrenade
 	edict_t* m_pRealOwner; // tracelines don't hit PEV->OWNER, which means a player couldn't detonate his own trip mine, so we store the owner here.
 };
 
-LINK_ENTITY_TO_CLASS(monster_tripmine, CTripmineGrenade);
+LINK_ENTITY_TO_CLASS(monster_tripmine, CTripmineGrenade); // orig 0x11e110
 
 TYPEDESCRIPTION CTripmineGrenade::m_SaveData[] =
 	{
@@ -74,9 +82,10 @@ TYPEDESCRIPTION CTripmineGrenade::m_SaveData[] =
 		DEFINE_FIELD(CTripmineGrenade, m_pRealOwner, FIELD_EDICT),
 };
 
-IMPLEMENT_SAVERESTORE(CTripmineGrenade, CGrenade);
+IMPLEMENT_SAVERESTORE(CTripmineGrenade, CGrenade); // Save orig 0x11e130, Restore orig 0x11e180
 
 
+// orig 0x11e1d0. Oz: damage_tripmine; the owner is copied to euser1 too.
 void CTripmineGrenade::Spawn()
 {
 	Precache();
@@ -110,7 +119,7 @@ void CTripmineGrenade::Spawn()
 	pev->nextthink = gpGlobals->time + 0.2;
 
 	pev->takedamage = DAMAGE_YES;
-	pev->dmg = gSkillData.plrDmgTripmine;
+	pev->dmg = oz_damagetripmine.value; // Oz variables (.value)
 	pev->health = 1; // don't let die normally
 
 	if (pev->owner != NULL)
@@ -120,6 +129,7 @@ void CTripmineGrenade::Spawn()
 		EMIT_SOUND(ENT(pev), CHAN_BODY, "weapons/mine_charge.wav", 0.2, ATTN_NORM); // chargeup
 
 		m_pRealOwner = pev->owner; // see CTripmineGrenade for why.
+		pev->euser1 = pev->owner;  // Oz. VERIFY: what reads it (not in this package)
 	}
 
 	UTIL_MakeAimVectors(pev->angles);
@@ -129,6 +139,7 @@ void CTripmineGrenade::Spawn()
 }
 
 
+// orig 0x11e440
 void CTripmineGrenade::Precache()
 {
 	PRECACHE_MODEL("models/v_tripmine.mdl");
@@ -138,6 +149,7 @@ void CTripmineGrenade::Precache()
 }
 
 
+// orig 0x11e4a0
 void CTripmineGrenade::WarningThink()
 {
 	// play warning sound
@@ -149,6 +161,7 @@ void CTripmineGrenade::WarningThink()
 }
 
 
+// orig 0x11e4f0
 void CTripmineGrenade::PowerupThink()
 {
 	TraceResult tr;
@@ -205,7 +218,7 @@ void CTripmineGrenade::PowerupThink()
 		pev->solid = SOLID_BBOX;
 		UTIL_SetOrigin(pev, pev->origin);
 
-		MakeBeam();
+		MakeBeam(tripmode);
 
 		// play enabled sound
 		EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "weapons/mine_activate.wav", 0.5, ATTN_NORM, 1.0, 75);
@@ -214,6 +227,7 @@ void CTripmineGrenade::PowerupThink()
 }
 
 
+// orig 0x11e9e0
 void CTripmineGrenade::KillBeam()
 {
 	if (m_pBeam)
@@ -224,7 +238,8 @@ void CTripmineGrenade::KillBeam()
 }
 
 
-void CTripmineGrenade::MakeBeam()
+// orig 0x11ea20. Oz: the colour from tripmode (see the top of the file).
+void CTripmineGrenade::MakeBeam(int iMode)
 {
 	TraceResult tr;
 
@@ -241,17 +256,71 @@ void CTripmineGrenade::MakeBeam()
 	Vector vecTmpEnd = pev->origin + m_vecDir * 2048 * m_flBeamLength;
 
 	m_pBeam = CBeam::BeamCreate(g_pModelNameLaser, 10);
+	// halflife-updated's fix, kept: temporary, so a level change recreates it (7d84906,
+	// halflife#3245); the original doesn't flag it
 	//Mark as temporary so the beam will be recreated on save game load and level transitions.
 	m_pBeam->pev->spawnflags |= SF_BEAM_TEMPORARY;
+	// halflife-updated's fix, kept: PointsInit (819a9ac, halflife#1670); the original uses
+	// PointEntInit(vecTmpEnd, entindex())
 	//PointEntInit causes clients to use the position of whatever the previous entity to use this edict had until the server updates them.
 	//m_pBeam->PointEntInit(vecTmpEnd, entindex());
 	m_pBeam->PointsInit(pev->origin, vecTmpEnd);
-	m_pBeam->SetColor(0, 214, 198);
+
+	// Oz tripmine colours
+	int r, g, b;
+	switch (tripmode)
+	{
+	case 1:
+		r = 0;
+		g = 0;
+		b = 0;
+		break;
+	case 2:
+		// Oz variables (.value)
+		r = (int)oz_colorredtripmine.value;
+		g = (int)oz_colorgreentripmine.value;
+		b = (int)oz_colorbluetripmine.value;
+		break;
+	case 3:
+		r = (int)RANDOM_FLOAT(50, 255);
+		g = (int)RANDOM_FLOAT(50, 255);
+		b = (int)RANDOM_FLOAT(50, 255);
+		break;
+	case 4:
+		r = 255;
+		g = 0;
+		b = 0;
+		break;
+	case 5:
+		r = 0;
+		g = 0;
+		b = 255;
+		break;
+	case 6:
+		r = 255;
+		g = 191;
+		b = 0;
+		break;
+	case 7:
+		r = 0;
+		g = 255;
+		b = 0;
+		break;
+	default:
+		// VERIFY: the original leaves the three uninitialized (tripmode 0, no mine placed
+		// since the map loaded: only a map's own monster_tripmine); 0 here
+		r = 0;
+		g = 0;
+		b = 0;
+		break;
+	}
+	m_pBeam->SetColor(r, g, b);
 	m_pBeam->SetScrollRate(255);
 	m_pBeam->SetBrightness(64);
 }
 
 
+// orig 0x11ed50
 void CTripmineGrenade::BeamBreakThink()
 {
 	bool bBlowup = false;
@@ -265,6 +334,8 @@ void CTripmineGrenade::BeamBreakThink()
 	// ALERT( at_console, "%f : %f\n", tr.flFraction, m_flBeamLength );
 
 	// respawn detect.
+	// halflife-updated's fix, kept: the owner is found again with the owner trace after a save
+	// game load (6f0ae55 #172, 79f9e95 #192); the original takes the beam trace's pHit
 	if (!m_pBeam)
 	{
 		// Use the same trace parameters as the original trace above so the right entity is hit.
@@ -272,7 +343,7 @@ void CTripmineGrenade::BeamBreakThink()
 		// Clear out old owner so it can be hit by traces.
 		pev->owner = nullptr;
 		UTIL_TraceLine(pev->origin + m_vecDir * 8, pev->origin - m_vecDir * 32, dont_ignore_monsters, ENT(pev), &tr2);
-		MakeBeam();
+		MakeBeam(tripmode);
 		if (tr2.pHit)
 		{
 			// reset owner too
@@ -310,6 +381,7 @@ void CTripmineGrenade::BeamBreakThink()
 	pev->nextthink = gpGlobals->time + 0.1;
 }
 
+// orig 0x11ef90
 bool CTripmineGrenade::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
 {
 	if (gpGlobals->time < m_flPowerUp && flDamage < pev->health)
@@ -324,6 +396,7 @@ bool CTripmineGrenade::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacke
 	return CGrenade::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
 }
 
+// orig 0x11f050
 void CTripmineGrenade::Killed(entvars_t* pevAttacker, int iGib)
 {
 	pev->takedamage = DAMAGE_NO;
@@ -341,6 +414,7 @@ void CTripmineGrenade::Killed(entvars_t* pevAttacker, int iGib)
 }
 
 
+// orig 0x11f100
 void CTripmineGrenade::DelayDeathThink()
 {
 	KillBeam();
@@ -351,10 +425,17 @@ void CTripmineGrenade::DelayDeathThink()
 }
 #endif
 
-LINK_ENTITY_TO_CLASS(weapon_tripmine, CTripmine);
+LINK_ENTITY_TO_CLASS(weapon_tripmine, CTripmine); // orig 0x11f1f0
 
+// orig 0x11f210. Oz: disable_tripmine removes it; give_with_tripmine mines.
 void CTripmine::Spawn()
 {
+	if (oz_disabletripmine.value > 0)
+	{
+		Kill();
+		return;
+	}
+
 	Precache();
 	m_iId = WEAPON_TRIPMINE;
 	SET_MODEL(ENT(pev), "models/v_tripmine.mdl");
@@ -366,7 +447,7 @@ void CTripmine::Spawn()
 
 	FallInit(); // get ready to fall down
 
-	m_iDefaultAmmo = TRIPMINE_DEFAULT_GIVE;
+	m_iDefaultAmmo = (int)oz_givewithtripmine.value; // Oz variables (.value)
 
 	//HACK: force the body to the first person view by default so it doesn't show up as a huge tripmine for a second.
 #ifdef CLIENT_DLL
@@ -383,6 +464,7 @@ void CTripmine::Spawn()
 	}
 }
 
+// orig 0x11f330
 void CTripmine::Precache()
 {
 	PRECACHE_MODEL("models/v_tripmine.mdl");
@@ -392,23 +474,26 @@ void CTripmine::Precache()
 	m_usTripFire = PRECACHE_EVENT(1, "events/tripfire.sc");
 }
 
+// orig 0x11f3a0. Oz: max_tripmines, weight_tripmine.
 bool CTripmine::GetItemInfo(ItemInfo* p)
 {
 	p->pszName = STRING(pev->classname);
 	p->pszAmmo1 = "Trip Mine";
-	p->iMaxAmmo1 = TRIPMINE_MAX_CARRY;
+	p->iMaxAmmo1 = (int)oz_maxtripmines.value;
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
 	p->iSlot = 4;
 	p->iPosition = 2;
 	p->iId = m_iId = WEAPON_TRIPMINE;
-	p->iWeight = TRIPMINE_WEIGHT;
+	p->iWeight = (int)oz_weighttripmine.value; // Oz weight
 	p->iFlags = ITEM_FLAG_LIMITINWORLD | ITEM_FLAG_EXHAUSTIBLE;
 
 	return true;
 }
 
+// orig 0x11f470. halflife-updated's fix, kept: pev->body = 0 (68dc517 #129, c10b998); not in
+// the original.
 bool CTripmine::Deploy()
 {
 	pev->body = 0;
@@ -416,6 +501,7 @@ bool CTripmine::Deploy()
 }
 
 
+// orig 0x11f4b0
 void CTripmine::Holster()
 {
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
@@ -432,10 +518,34 @@ void CTripmine::Holster()
 	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "common/null.wav", 1.0, ATTN_NORM);
 }
 
+// orig 0x11f590. Oz: the beam colour mode, random with random_tripmine_color 1.
 void CTripmine::PrimaryAttack()
 {
 	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
 		return;
+
+	// Oz variables (.value)
+	tripmodeset(oz_randomtripminecolor.value == 1 ? 3 : 2);
+
+	PlaceMine();
+}
+
+// orig 0x11f8c0. Oz: a mine with a black (invisible) beam. It needs more than
+// ammo_used_per_secondary_mine - 1 mines but uses one (original bug, kept).
+void CTripmine::SecondaryAttack()
+{
+	// Oz variables (.value)
+	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= oz_sectripammoused.value - 1)
+		return;
+
+	tripmodeset(1);
+
+	PlaceMine();
+}
+
+// The rest of PrimaryAttack and SecondaryAttack, which the original repeats in both (name ours).
+void CTripmine::PlaceMine()
+{
 
 	UTIL_MakeVectors(m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle);
 	Vector vecSrc = m_pPlayer->GetGunPosition();
@@ -484,10 +594,11 @@ void CTripmine::PrimaryAttack()
 	{
 	}
 
-	m_flNextPrimaryAttack = GetNextAttackDelay(0.3);
+	m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.3;
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat(m_pPlayer->random_seed, 10, 15);
 }
 
+// orig 0x11fbe0. halflife-updated's pev->body = 0 kept (see Deploy).
 void CTripmine::WeaponIdle()
 {
 	//If we're here then we're in a player's inventory, and need to use this body
@@ -525,4 +636,11 @@ void CTripmine::WeaponIdle()
 	}
 
 	SendWeaponAnim(iAnim);
+}
+
+// orig 0x11fd10. Oz: sets the global beam colour mode (1-7; anything else leaves it).
+void CTripmine::tripmodeset(int iMode)
+{
+	if (iMode >= 1 && iMode <= 7)
+		tripmode = iMode;
 }

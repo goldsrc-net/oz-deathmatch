@@ -23,9 +23,12 @@
 #include "shake.h"
 #include "gamerules.h"
 #include "UserMessages.h"
+#include "game.h"
+#include "items.h"
 
-LINK_ENTITY_TO_CLASS(weapon_gauss, CGauss);
+LINK_ENTITY_TO_CLASS(weapon_gauss, CGauss); // orig 0xc0510
 
+// orig 0xc0530
 float CGauss::GetFullChargeTime()
 {
 #ifdef CLIENT_DLL
@@ -44,18 +47,28 @@ float CGauss::GetFullChargeTime()
 extern bool g_irunninggausspred;
 #endif
 
+// orig 0xc0570. Oz: disable_gauss 1 removes it (tested for exactly 1, where the other weapons
+// test > 0); give_with_gauss uranium.
 void CGauss::Spawn()
 {
+	if (oz_disablegauss.value == 1)
+	{
+		Kill();
+		return;
+	}
+
 	Precache();
 	m_iId = WEAPON_GAUSS;
 	SET_MODEL(ENT(pev), "models/w_gauss.mdl");
 
-	m_iDefaultAmmo = GAUSS_DEFAULT_GIVE;
+	// Oz variables (.value)
+	m_iDefaultAmmo = (int)oz_givewithgauss.value;
 
 	FallInit(); // get ready to fall down.
 }
 
 
+// orig 0xc0610
 void CGauss::Precache()
 {
 	PRECACHE_MODEL("models/w_gauss.mdl");
@@ -78,11 +91,23 @@ void CGauss::Precache()
 	m_usGaussSpin = PRECACHE_EVENT(1, "events/gaussspin.sc");
 }
 
+// orig 0xc0750. SDK 2.3's WeapPickup from AddToPlayer (design per mod-rc2's FIXES.md).
+void CGauss::AddToPlayer(CBasePlayer* pPlayer)
+{
+	CBasePlayerWeapon::AddToPlayer(pPlayer);
+#ifndef CLIENT_DLL
+	MESSAGE_BEGIN(MSG_ONE, gmsgWeapPickup, NULL, pPlayer->pev);
+	WRITE_BYTE(m_iId);
+	MESSAGE_END();
+#endif
+}
+
+// orig 0xc07e0. Oz: max_uranium, weight_gauss.
 bool CGauss::GetItemInfo(ItemInfo* p)
 {
 	p->pszName = STRING(pev->classname);
 	p->pszAmmo1 = "uranium";
-	p->iMaxAmmo1 = URANIUM_MAX_CARRY;
+	p->iMaxAmmo1 = (int)oz_maxuranium.value;
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
@@ -90,17 +115,19 @@ bool CGauss::GetItemInfo(ItemInfo* p)
 	p->iPosition = 1;
 	p->iId = m_iId = WEAPON_GAUSS;
 	p->iFlags = 0;
-	p->iWeight = GAUSS_WEIGHT;
+	p->iWeight = (int)oz_weightgauss.value; // Oz weight
 
 	return true;
 }
 
+// orig 0xc08b0
 bool CGauss::Deploy()
 {
 	m_pPlayer->m_flPlayAftershock = 0.0;
 	return DefaultDeploy("models/v_gauss.mdl", "models/p_gauss.mdl", GAUSS_DRAW, "gauss");
 }
 
+// orig 0xc0900
 void CGauss::Holster()
 {
 	SendStopEvent(true);
@@ -112,13 +139,16 @@ void CGauss::Holster()
 }
 
 
+// orig 0xc09b0. Oz: fires underwater with water_weapons; cycle_gauss's refire, halved with the
+// Haste Rune.
 void CGauss::PrimaryAttack()
 {
 	// don't fire underwater
-	if (m_pPlayer->pev->waterlevel == 3)
+	// Oz variables (.value)
+	if (m_pPlayer->pev->waterlevel == 3 && oz_waterweapons.value == 0)
 	{
 		PlayEmptySound();
-		m_flNextSecondaryAttack = m_flNextPrimaryAttack = GetNextAttackDelay(0.15);
+		m_flNextSecondaryAttack = m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.15;
 		return;
 	}
 
@@ -137,11 +167,20 @@ void CGauss::PrimaryAttack()
 	StartFire();
 	m_fInAttack = 0;
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.0;
-	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.2;
+
+	// Oz runes - haste
+	if (m_pPlayer->m_iRune == RUNE_HASTE)
+		m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + oz_cyclegauss.value * 0.5;
+	else
+		m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + oz_cyclegauss.value;
 }
 
+// orig 0xc0b40. Oz: no water_weapons test here (the charge never works underwater);
+// gauss_maxchargetime before the overcharge zap, which deals 90 DMG_BLAST and fades orange-red.
 void CGauss::SecondaryAttack()
 {
+	// halflife-updated's fix, kept: a stale charge start from a level transition is clamped
+	// (8c5d4ab, HL25)
 	// JoshA: Sanitize this so it's not total garbage on level transition
 	// and we end up ear blasting the player!
 	m_pPlayer->m_flStartCharge = V_min(m_pPlayer->m_flStartCharge, gpGlobals->time);
@@ -152,6 +191,7 @@ void CGauss::SecondaryAttack()
 		if (m_fInAttack != 0)
 		{
 			EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/electro4.wav", 1.0, ATTN_NORM, 0, 80 + RANDOM_LONG(0, 0x3f));
+			// halflife-updated's fix, kept: the spin sound is stopped (fd35528, halflife#3188)
 			//Have to send to the host as well because the client will predict the frame with m_fInAttack == 0
 			SendStopEvent(true);
 			SendWeaponAnim(GAUSS_IDLE);
@@ -162,7 +202,7 @@ void CGauss::SecondaryAttack()
 			PlayEmptySound();
 		}
 
-		m_flNextSecondaryAttack = m_flNextPrimaryAttack = GetNextAttackDelay(0.5);
+		m_flNextSecondaryAttack = m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.5;
 		return;
 	}
 
@@ -189,7 +229,8 @@ void CGauss::SecondaryAttack()
 		m_pPlayer->m_flStartCharge = gpGlobals->time;
 		m_pPlayer->m_flAmmoStartCharge = UTIL_WeaponTimeBase() + GetFullChargeTime();
 
-		PLAYBACK_EVENT_FULL(FEV_NOTHOST, m_pPlayer->edict(), m_usGaussSpin, 0.0, g_vecZero, g_vecZero, 0.0, 0.0, 110, 0, 0, 0);
+		// Oz: to the shooter as well when underwater (never, here: see above)
+		PLAYBACK_EVENT_FULL(m_pPlayer->pev->waterlevel != 3 ? FEV_NOTHOST : 0, m_pPlayer->edict(), m_usGaussSpin, 0.0, g_vecZero, g_vecZero, 0.0, 0.0, 110, 0, 0, 0);
 
 		m_iSoundState = SND_CHANGE_PITCH;
 	}
@@ -203,6 +244,8 @@ void CGauss::SecondaryAttack()
 	}
 	else
 	{
+		// halflife-updated's fix, kept: no ammo burn at 0 ammo (0e8d3ad, halflife#3343); the
+		// original could leave -1 uranium
 		if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] > 0)
 		{
 			// during the charging process, eat one bit of ammo every once in a while
@@ -250,14 +293,15 @@ void CGauss::SecondaryAttack()
 		if (m_iSoundState == 0)
 			ALERT(at_console, "sound state %d\n", m_iSoundState);
 
-		PLAYBACK_EVENT_FULL(FEV_NOTHOST, m_pPlayer->edict(), m_usGaussSpin, 0.0, g_vecZero, g_vecZero, 0.0, 0.0, pitch, 0, (m_iSoundState == SND_CHANGE_PITCH) ? 1 : 0, 0);
+		PLAYBACK_EVENT_FULL(m_pPlayer->pev->waterlevel != 3 ? FEV_NOTHOST : 0, m_pPlayer->edict(), m_usGaussSpin, 0.0, g_vecZero, g_vecZero, 0.0, 0.0, pitch, 0, (m_iSoundState == SND_CHANGE_PITCH) ? 1 : 0, 0);
 
 		m_iSoundState = SND_CHANGE_PITCH; // hack for going through level transitions
 
 		m_pPlayer->m_iWeaponVolume = GAUSS_PRIMARY_CHARGE_VOLUME;
 
 		// m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 0.1;
-		if (m_pPlayer->m_flStartCharge < gpGlobals->time - 10)
+		// Oz variables (.value)
+		if (m_pPlayer->m_flStartCharge < gpGlobals->time - oz_gaussmaxchargetime.value)
 		{
 			// Player charged up too long. Zap him.
 			EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/electro4.wav", 1.0, ATTN_NORM, 0, 80 + RANDOM_LONG(0, 0x3f));
@@ -267,11 +311,12 @@ void CGauss::SecondaryAttack()
 			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.0;
 			m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 1.0;
 
+			// halflife-updated's fix, kept: the spin sound is stopped (fd35528, halflife#3188)
 			SendStopEvent(false);
 
 #ifndef CLIENT_DLL
-			m_pPlayer->TakeDamage(CWorld::World->pev, CWorld::World->pev, 50, DMG_SHOCK);
-			UTIL_ScreenFade(m_pPlayer, Vector(255, 128, 0), 2, 0.5, 128, FFADE_IN);
+			m_pPlayer->TakeDamage(CWorld::World->pev, CWorld::World->pev, 90, DMG_BLAST);
+			UTIL_ScreenFade(m_pPlayer, Vector(255, 0, 20), 2, 0.5, 128, FFADE_IN);
 #endif
 			SendWeaponAnim(GAUSS_IDLE);
 
@@ -287,10 +332,13 @@ void CGauss::SecondaryAttack()
 // of weaponidle() and make its own function then to try to
 // merge this into Fire(), which has some identical variable names
 //=========================================================
+// orig 0xc1220. Oz: damage_gauss (primary, which also kicks the view by recoil_gauss) and
+// damage_gauss_max (the full charge); stops the charge loop.
 void CGauss::StartFire()
 {
 	float flDamage;
 
+	// halflife-updated's fix, kept: as in SecondaryAttack (8c5d4ab)
 	// JoshA: Sanitize this so it's not total garbage on level transition
 	// and we end up ear blasting the player!
 	m_pPlayer->m_flStartCharge = V_min(m_pPlayer->m_flStartCharge, gpGlobals->time);
@@ -299,13 +347,14 @@ void CGauss::StartFire()
 	Vector vecAiming = gpGlobals->v_forward;
 	Vector vecSrc = m_pPlayer->GetGunPosition(); // + gpGlobals->v_up * -8 + gpGlobals->v_right * 8;
 
+	// Oz variables (.value)
 	if (gpGlobals->time - m_pPlayer->m_flStartCharge > GetFullChargeTime())
 	{
-		flDamage = 200;
+		flDamage = oz_damagegaussmax.value;
 	}
 	else
 	{
-		flDamage = 200 * ((gpGlobals->time - m_pPlayer->m_flStartCharge) / GetFullChargeTime());
+		flDamage = oz_damagegaussmax.value * ((gpGlobals->time - m_pPlayer->m_flStartCharge) / GetFullChargeTime());
 	}
 
 	if (m_fPrimaryFire)
@@ -314,7 +363,9 @@ void CGauss::StartFire()
 #ifdef CLIENT_DLL
 		flDamage = 20;
 #else
-		flDamage = gSkillData.plrDmgGauss;
+		// Oz variables (.value)
+		flDamage = oz_damagegauss.value;
+		m_pPlayer->pev->punchangle.x = -oz_recoilgauss.value;
 #endif
 	}
 
@@ -341,12 +392,16 @@ void CGauss::StartFire()
 		m_pPlayer->SetAnimation(PLAYER_ATTACK1);
 	}
 
+	STOP_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "ambience/pulsemachine.wav");
+
 	// time until aftershock 'static discharge' sound
 	m_pPlayer->m_flPlayAftershock = gpGlobals->time + UTIL_SharedRandomFloat(m_pPlayer->random_seed, 0.3, 0.8);
 
 	Fire(vecSrc, vecAiming, flDamage);
 }
 
+// orig 0xc14c0. Oz: underwater (water_weapons) the events go to the shooter too, whose own
+// client won't predict a shot there; the multiplayer punch-through blast radius is 1.2 x damage.
 void CGauss::Fire(Vector vecOrigSrc, Vector vecDir, float flDamage)
 {
 	m_pPlayer->m_iWeaponVolume = GAUSS_PRIMARY_FIRE_VOLUME;
@@ -368,10 +423,14 @@ void CGauss::Fire(Vector vecOrigSrc, Vector vecDir, float flDamage)
 		g_irunninggausspred = true;
 #endif
 
-	// The main firing event is sent unreliably so it won't be delayed.
-	PLAYBACK_EVENT_FULL(FEV_NOTHOST, m_pPlayer->edict(), m_usGaussFire, 0.0, m_pPlayer->pev->origin, m_pPlayer->pev->angles, flDamage, 0.0, 0, 0, m_fPrimaryFire ? 1 : 0, 0);
+	const bool bToHost = m_pPlayer->pev->waterlevel == 3; // Oz
 
-	SendStopEvent(false);
+	// The main firing event is sent unreliably so it won't be delayed.
+	PLAYBACK_EVENT_FULL(bToHost ? 0 : FEV_NOTHOST, m_pPlayer->edict(), m_usGaussFire, 0.0, m_pPlayer->pev->origin, m_pPlayer->pev->angles, flDamage, 0.0, 0, 0, m_fPrimaryFire ? 1 : 0, 0);
+
+	// halflife-updated's fix, kept: FEV_GLOBAL, so the stop reaches players outside the PAS
+	// (52b6a8a, halflife#3233); the original's flags are FEV_RELIABLE plus Oz's host test
+	SendStopEvent(bToHost);
 
 
 	/*ALERT( at_console, "%f %f %f\n%f %f %f\n", 
@@ -409,11 +468,9 @@ void CGauss::Fire(Vector vecOrigSrc, Vector vecDir, float flDamage)
 		{
 			ClearMultiDamage();
 
-			// if you hurt yourself clear the headshot bit
-			if (m_pPlayer->pev == pEntity->pev)
-			{
-				tr.iHitgroup = 0;
-			}
+			// VERIFY (unclear, original kept): halflife-updated clears the hitgroup when the beam
+			// hits the shooter (8c5d4ab, HL25); the original keeps it, so a reflected beam can
+			// headshot its own shooter (head_damage)
 
 			pEntity->TraceAttack(m_pPlayer->pev, flDamage, vecDir, &tr, DMG_BULLET);
 			ApplyMultiDamage(m_pPlayer->pev, m_pPlayer->pev);
@@ -485,7 +542,7 @@ void CGauss::Fire(Vector vecOrigSrc, Vector vecDir, float flDamage)
 
 							if (g_pGameRules->IsMultiplayer())
 							{
-								damage_radius = flDamage * 1.75; // Old code == 2.5
+								damage_radius = flDamage * 1.2; // Oz (SDK's 1.75). Old code == 2.5
 							}
 							else
 							{
@@ -528,6 +585,7 @@ void CGauss::Fire(Vector vecOrigSrc, Vector vecDir, float flDamage)
 
 
 
+// orig 0xc1c80
 void CGauss::WeaponIdle()
 {
 	ResetEmptySound();
@@ -586,6 +644,7 @@ void CGauss::WeaponIdle()
 	}
 }
 
+// halflife-updated's (b0ed81b): the original writes these events inline
 void CGauss::SendStopEvent(bool sendToHost)
 {
 	// This reliable event is used to stop the spinning sound
@@ -604,6 +663,8 @@ void CGauss::SendStopEvent(bool sendToHost)
 
 
 
+// The original's inline CGaussAmmo methods: Spawn orig 0x13c310, Precache orig 0x13c2d0, AddAmmo
+// orig 0x13c210 (Oz: give_uranium, max_uranium).
 class CGaussAmmo : public CBasePlayerAmmo
 {
 	void Spawn() override
@@ -619,7 +680,7 @@ class CGaussAmmo : public CBasePlayerAmmo
 	}
 	bool AddAmmo(CBaseEntity* pOther) override
 	{
-		if (pOther->GiveAmmo(AMMO_URANIUMBOX_GIVE, "uranium", URANIUM_MAX_CARRY) != -1)
+		if (pOther->GiveAmmo((int)oz_giveuranium.value, "uranium", (int)oz_maxuranium.value) != -1)
 		{
 			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
 			return true;
@@ -627,4 +688,4 @@ class CGaussAmmo : public CBasePlayerAmmo
 		return false;
 	}
 };
-LINK_ENTITY_TO_CLASS(ammo_gaussclip, CGaussAmmo);
+LINK_ENTITY_TO_CLASS(ammo_gaussclip, CGaussAmmo); // orig 0xc1ef0

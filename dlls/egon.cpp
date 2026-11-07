@@ -23,31 +23,47 @@
 #include "customentity.h"
 #include "gamerules.h"
 #include "UserMessages.h"
+#include "game.h"
 
 #ifdef CLIENT_DLL
 #include "hud.h"
 #include "com_weapons.h"
-#else
-extern bool IsBustingGame();
 #endif
+
+// Oz: OZ's gluon gun is the pre-prediction SDK's (1.7's, nearly unchanged): it plays its own
+// sounds and sends no events, primary fires the narrow beam and secondary the wide one, and the
+// beam entities aren't hidden from the shooter. Valve's client still predicts the stock egon for
+// its user, as it did in 2004.
 
 #define EGON_SWITCH_NARROW_TIME 0.75 // Time it takes to switch fire modes
 #define EGON_SWITCH_WIDE_TIME 1.5
 
-LINK_ENTITY_TO_CLASS(weapon_egon, CEgon);
+LINK_ENTITY_TO_CLASS(weapon_egon, CEgon); // orig 0xb2b30
 
+int CEgon::g_fireAnims1[] = {EGON_FIRE1, EGON_FIRE2, EGON_FIRE3, EGON_FIRE4}; // orig .data 0x15d7cc
+int CEgon::g_fireAnims2[] = {EGON_ALTFIRECYCLE};							   // orig .data 0x15d7dc, unused
+
+// orig 0xb2b50. Oz: disable_egon 1 removes it; give_with_egon uranium.
 void CEgon::Spawn()
 {
+	if (oz_disableegon.value == 1)
+	{
+		Kill();
+		return;
+	}
+
 	Precache();
 	m_iId = WEAPON_EGON;
 	SET_MODEL(ENT(pev), "models/w_egon.mdl");
 
-	m_iDefaultAmmo = EGON_DEFAULT_GIVE;
+	// Oz variables (.value)
+	m_iDefaultAmmo = (int)oz_givewithegon.value;
 
 	FallInit(); // get ready to fall down.
 }
 
 
+// orig 0xb2bf0. No events (see the top of the file).
 void CEgon::Precache()
 {
 	PRECACHE_MODEL("models/w_egon.mdl");
@@ -65,12 +81,10 @@ void CEgon::Precache()
 	PRECACHE_MODEL(EGON_FLARE_SPRITE);
 
 	PRECACHE_SOUND("weapons/357_cock1.wav");
-
-	m_usEgonFire = PRECACHE_EVENT(1, "events/egon_fire.sc");
-	m_usEgonStop = PRECACHE_EVENT(1, "events/egon_stop.sc");
 }
 
 
+// orig 0xb2cd0
 bool CEgon::Deploy()
 {
 	m_deployed = false;
@@ -78,6 +92,18 @@ bool CEgon::Deploy()
 	return DefaultDeploy("models/v_egon.mdl", "models/p_egon.mdl", EGON_DRAW, "egon");
 }
 
+// orig 0xb2d20. SDK 2.3's WeapPickup from AddToPlayer (design per mod-rc2's FIXES.md).
+void CEgon::AddToPlayer(CBasePlayer* pPlayer)
+{
+	CBasePlayerWeapon::AddToPlayer(pPlayer);
+#ifndef CLIENT_DLL
+	MESSAGE_BEGIN(MSG_ONE, gmsgWeapPickup, NULL, pPlayer->pev);
+	WRITE_BYTE(m_iId);
+	MESSAGE_END();
+#endif
+}
+
+// orig 0xb2db0
 void CEgon::Holster()
 {
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
@@ -86,11 +112,12 @@ void CEgon::Holster()
 	EndAttack();
 }
 
+// orig 0xb2e10. Oz: max_uranium, weight_egon.
 bool CEgon::GetItemInfo(ItemInfo* p)
 {
 	p->pszName = STRING(pev->classname);
 	p->pszAmmo1 = "uranium";
-	p->iMaxAmmo1 = URANIUM_MAX_CARRY;
+	p->iMaxAmmo1 = (int)oz_maxuranium.value;
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
@@ -98,7 +125,7 @@ bool CEgon::GetItemInfo(ItemInfo* p)
 	p->iPosition = 2;
 	p->iId = m_iId = WEAPON_EGON;
 	p->iFlags = 0;
-	p->iWeight = EGON_WEIGHT;
+	p->iWeight = (int)oz_weightegon.value; // Oz weight
 
 	return true;
 }
@@ -106,16 +133,19 @@ bool CEgon::GetItemInfo(ItemInfo* p)
 #define EGON_PULSE_INTERVAL 0.1
 #define EGON_DISCHARGE_INTERVAL 0.1
 
+// orig 0xb2ee0
 float CEgon::GetPulseInterval()
 {
 	return EGON_PULSE_INTERVAL;
 }
 
+// orig 0xb2f00
 float CEgon::GetDischargeInterval()
 {
 	return EGON_DISCHARGE_INTERVAL;
 }
 
+// orig 0xb2f20
 bool CEgon::HasAmmo()
 {
 	if (m_pPlayer->ammo_uranium <= 0)
@@ -124,23 +154,21 @@ bool CEgon::HasAmmo()
 	return true;
 }
 
+// orig 0xb2f50. No busters exception (halflife-updated's HL25 game mode, e0ba8ce: design).
 void CEgon::UseAmmo(int count)
 {
-#ifndef CLIENT_DLL
-	if (IsBustingGame())
-		return;
-#endif
-
 	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] >= count)
 		m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] -= count;
 	else
 		m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] = 0;
 }
 
+// orig 0xb2fb0. Oz: fires underwater with water_weapons.
 void CEgon::Attack()
 {
 	// don't fire underwater
-	if (m_pPlayer->pev->waterlevel == 3)
+	// Oz variables (.value)
+	if (m_pPlayer->pev->waterlevel == 3 && oz_waterweapons.value == 0)
 	{
 
 		if (m_fireState != FIRE_OFF || m_pBeam)
@@ -158,13 +186,6 @@ void CEgon::Attack()
 	Vector vecAiming = gpGlobals->v_forward;
 	Vector vecSrc = m_pPlayer->GetGunPosition();
 
-	int flags;
-#if defined(CLIENT_WEAPONS)
-	flags = FEV_NOTHOST;
-#else
-	flags = 0;
-#endif
-
 	switch (m_fireState)
 	{
 	case FIRE_OFF:
@@ -178,13 +199,21 @@ void CEgon::Attack()
 
 		m_flAmmoUseTime = gpGlobals->time; // start using ammo ASAP.
 
-		PLAYBACK_EVENT_FULL(flags, m_pPlayer->edict(), m_usEgonFire, 0.0, g_vecZero, g_vecZero, 0.0, 0.0, 0, m_fireMode, 1, 0);
-
+		SendWeaponAnim(g_fireAnims1[RANDOM_LONG(0, ARRAYSIZE(g_fireAnims1) - 1)]);
 		m_shakeTime = 0;
 
 		m_pPlayer->m_iWeaponVolume = EGON_PRIMARY_VOLUME;
 		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 0.1;
 		pev->fuser1 = UTIL_WeaponTimeBase() + 2;
+
+		if (m_fireMode == FIRE_WIDE)
+		{
+			EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, EGON_SOUND_STARTUP, 0.98, ATTN_NORM, 0, 125);
+		}
+		else
+		{
+			EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, EGON_SOUND_STARTUP, 0.9, ATTN_NORM, 0, 100);
+		}
 
 		pev->dmgtime = gpGlobals->time + GetPulseInterval();
 		m_fireState = FIRE_CHARGE;
@@ -198,7 +227,15 @@ void CEgon::Attack()
 
 		if (pev->fuser1 <= UTIL_WeaponTimeBase())
 		{
-			PLAYBACK_EVENT_FULL(flags, m_pPlayer->edict(), m_usEgonFire, 0, g_vecZero, g_vecZero, 0.0, 0.0, 0, m_fireMode, 0, 0);
+			if (m_fireMode == FIRE_WIDE)
+			{
+				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_STATIC, EGON_SOUND_RUN, 0.98, ATTN_NORM, 0, 125);
+			}
+			else
+			{
+				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_STATIC, EGON_SOUND_RUN, 0.9, ATTN_NORM, 0, 100);
+			}
+
 			pev->fuser1 = 1000;
 		}
 
@@ -212,12 +249,22 @@ void CEgon::Attack()
 	}
 }
 
+// orig 0xb3320. Oz: the narrow beam (the SDK's primary is the wide one).
 void CEgon::PrimaryAttack()
+{
+	m_fireMode = FIRE_NARROW;
+	Attack();
+}
+
+// orig 0xb3350. Oz: the wide beam.
+void CEgon::SecondaryAttack()
 {
 	m_fireMode = FIRE_WIDE;
 	Attack();
 }
 
+// orig 0xb3380 (Ghidra splits it at 0xc3391; read from the disassembly). Oz: damage_egon_narrow,
+// damage_egon_wide.
 void CEgon::Fire(const Vector& vecOrigSrc, const Vector& vecDir)
 {
 	Vector vecDest = vecOrigSrc + vecDir * 2048;
@@ -268,7 +315,8 @@ void CEgon::Fire(const Vector& vecOrigSrc, const Vector& vecDir)
 			ClearMultiDamage();
 			if (0 != pEntity->pev->takedamage)
 			{
-				pEntity->TraceAttack(m_pPlayer->pev, gSkillData.plrDmgEgonNarrow, vecDir, &tr, DMG_ENERGYBEAM);
+				// Oz variables (.value)
+				pEntity->TraceAttack(m_pPlayer->pev, oz_damageegonnarrow.value, vecDir, &tr, DMG_ENERGYBEAM);
 			}
 			ApplyMultiDamage(m_pPlayer->pev, m_pPlayer->pev);
 
@@ -305,14 +353,16 @@ void CEgon::Fire(const Vector& vecOrigSrc, const Vector& vecDir)
 			ClearMultiDamage();
 			if (0 != pEntity->pev->takedamage)
 			{
-				pEntity->TraceAttack(m_pPlayer->pev, gSkillData.plrDmgEgonWide, vecDir, &tr, DMG_ENERGYBEAM | DMG_ALWAYSGIB);
+				// Oz variables (.value)
+				pEntity->TraceAttack(m_pPlayer->pev, oz_damageegonwide.value, vecDir, &tr, DMG_ENERGYBEAM | DMG_ALWAYSGIB);
 			}
 			ApplyMultiDamage(m_pPlayer->pev, m_pPlayer->pev);
 
 			if (g_pGameRules->IsMultiplayer())
 			{
 				// radius damage a little more potent in multiplayer.
-				::RadiusDamage(tr.vecEndPos, pev, m_pPlayer->pev, gSkillData.plrDmgEgonWide / 4, 128, CLASS_NONE, DMG_ENERGYBEAM | DMG_BLAST | DMG_ALWAYSGIB);
+				// Oz variables (.value)
+				::RadiusDamage(tr.vecEndPos, pev, m_pPlayer->pev, oz_damageegonwide.value / 4, 128, CLASS_NONE, DMG_ENERGYBEAM | DMG_BLAST | DMG_ALWAYSGIB);
 			}
 
 			if (!m_pPlayer->IsAlive())
@@ -359,6 +409,7 @@ void CEgon::Fire(const Vector& vecOrigSrc, const Vector& vecDir)
 }
 
 
+// orig 0xb3990
 void CEgon::UpdateEffect(const Vector& startPoint, const Vector& endPoint, float timeBlend)
 {
 #ifndef CLIENT_DLL
@@ -387,6 +438,8 @@ void CEgon::UpdateEffect(const Vector& startPoint, const Vector& endPoint, float
 #endif
 }
 
+// orig 0xb3c80. OZ's beams have no owner and no FL_SKIPLOCALHOST (SDK 2.3's), so the shooter
+// sees the server's beam as well as his client's predicted one.
 void CEgon::CreateEffect()
 {
 
@@ -398,8 +451,6 @@ void CEgon::CreateEffect()
 	m_pBeam->SetFlags(BEAM_FSINE);
 	m_pBeam->SetEndAttachment(1);
 	m_pBeam->pev->spawnflags |= SF_BEAM_TEMPORARY; // Flag these to be destroyed on save/restore or level transition
-	m_pBeam->pev->flags |= FL_SKIPLOCALHOST;
-	m_pBeam->pev->owner = m_pPlayer->edict();
 
 	m_pNoise = CBeam::BeamCreate(EGON_BEAM_SPRITE, 55);
 	m_pNoise->PointEntInit(pev->origin, m_pPlayer->entindex());
@@ -407,17 +458,11 @@ void CEgon::CreateEffect()
 	m_pNoise->SetBrightness(100);
 	m_pNoise->SetEndAttachment(1);
 	m_pNoise->pev->spawnflags |= SF_BEAM_TEMPORARY;
-	m_pNoise->pev->flags |= FL_SKIPLOCALHOST;
-	m_pNoise->pev->owner = m_pPlayer->edict();
 
 	m_pSprite = CSprite::SpriteCreate(EGON_FLARE_SPRITE, pev->origin, false);
 	m_pSprite->pev->scale = 1.0;
 	m_pSprite->SetTransparency(kRenderGlow, 255, 255, 255, 255, kRenderFxNoDissipation);
 	m_pSprite->pev->spawnflags |= SF_SPRITE_TEMPORARY;
-	// Josh: This sprite is not predicted on the client, so was missing
-	// for many years after it got broken in an update.
-	// m_pSprite->pev->flags |= FL_SKIPLOCALHOST;
-	m_pSprite->pev->owner = m_pPlayer->edict();
 
 	if (m_fireMode == FIRE_WIDE)
 	{
@@ -437,6 +482,7 @@ void CEgon::CreateEffect()
 }
 
 
+// orig 0xb3f20
 void CEgon::DestroyEffect()
 {
 
@@ -464,16 +510,15 @@ void CEgon::DestroyEffect()
 
 
 
+// orig 0xb3fd0. CEgon has no ShouldWeaponIdle here, so this runs only with no attack button held.
+// The original tests the idle time against gpGlobals->time, but with CLIENT_WEAPONS the weapon
+// timers count down from UTIL_WeaponTimeBase() (0): the test always passes and the idle
+// animation restarts on every idle frame (original bug, kept).
 void CEgon::WeaponIdle()
 {
-	if ((m_pPlayer->m_afButtonPressed & IN_ATTACK2) == 0 && (m_pPlayer->pev->button & IN_ATTACK) != 0)
-	{
-		return;
-	}
-
 	ResetEmptySound();
 
-	if (m_flTimeWeaponIdle > UTIL_WeaponTimeBase())
+	if (m_flTimeWeaponIdle > gpGlobals->time)
 		return;
 
 	if (m_fireState != FIRE_OFF)
@@ -498,27 +543,11 @@ void CEgon::WeaponIdle()
 	m_deployed = true;
 }
 
-bool CEgon::CanHolster()
-{
-#ifndef CLIENT_DLL
-	if (IsBustingGame())
-	{
-		return false;
-	}
-#endif
-
-	return true;
-}
-
+// orig 0xb40c0. Stops the run loop and plays the off sound itself (no egon_stop event).
 void CEgon::EndAttack()
 {
-	bool bMakeNoise = false;
-
-	if (m_fireState != FIRE_OFF) //Checking the button just in case!.
-		bMakeNoise = true;
-
-	PLAYBACK_EVENT_FULL(FEV_GLOBAL | FEV_RELIABLE, m_pPlayer->edict(), m_usEgonStop, 0, m_pPlayer->pev->origin, m_pPlayer->pev->angles, 0.0, 0.0,
-		static_cast<int>(bMakeNoise), 0, 0, 0);
+	STOP_SOUND(ENT(m_pPlayer->pev), CHAN_STATIC, EGON_SOUND_RUN);
+	EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, EGON_SOUND_OFF, 0.98, ATTN_NORM, 0, 100);
 
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2.0;
 
@@ -531,6 +560,8 @@ void CEgon::EndAttack()
 
 
 
+// The original's inline CEgonAmmo methods: Spawn orig 0x13ba60, Precache orig 0x13ba20, AddAmmo
+// orig 0x13b960 (Oz: give_uranium, max_uranium).
 class CEgonAmmo : public CBasePlayerAmmo
 {
 	void Spawn() override
@@ -546,7 +577,7 @@ class CEgonAmmo : public CBasePlayerAmmo
 	}
 	bool AddAmmo(CBaseEntity* pOther) override
 	{
-		if (pOther->GiveAmmo(AMMO_URANIUMBOX_GIVE, "uranium", URANIUM_MAX_CARRY) != -1)
+		if (pOther->GiveAmmo((int)oz_giveuranium.value, "uranium", (int)oz_maxuranium.value) != -1)
 		{
 			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
 			return true;
@@ -554,4 +585,4 @@ class CEgonAmmo : public CBasePlayerAmmo
 		return false;
 	}
 };
-LINK_ENTITY_TO_CLASS(ammo_egonclip, CEgonAmmo);
+LINK_ENTITY_TO_CLASS(ammo_egonclip, CEgonAmmo); // orig 0xb4180

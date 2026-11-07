@@ -25,12 +25,13 @@
 #include "weapons.h"
 #include "soundent.h"
 #include "decals.h"
+#include "game.h"
 
 
 //===================grenade
 
 
-LINK_ENTITY_TO_CLASS(grenade, CGrenade);
+LINK_ENTITY_TO_CLASS(grenade, CGrenade); // orig 0xc21d0
 
 // Grenades flagged with this will be triggered when the owner calls detonateSatchelCharges
 #define SF_DETONATE 0x0001
@@ -38,6 +39,7 @@ LINK_ENTITY_TO_CLASS(grenade, CGrenade);
 //
 // Grenade Explode
 //
+// orig 0xc21f0
 void CGrenade::Explode(Vector vecSrc, Vector vecAim)
 {
 	TraceResult tr;
@@ -47,6 +49,7 @@ void CGrenade::Explode(Vector vecSrc, Vector vecAim)
 }
 
 // UNDONE: temporary scorching for PreAlpha - find a less sleazy permenant solution.
+// orig 0xc2270 (Ghidra splits it at 0xd2281; read from the disassembly). SDK 2.3's.
 void CGrenade::Explode(TraceResult* pTrace, int bitsDamageType)
 {
 	float flRndSound; // sound randomizer
@@ -57,9 +60,13 @@ void CGrenade::Explode(TraceResult* pTrace, int bitsDamageType)
 	pev->takedamage = DAMAGE_NO;
 
 	// Pull out of the wall a bit
+	// VERIFY (unclear, original kept): halflife-updated pulls out by 0.6 units (078e787,
+	// halflife#3244) so a big explosion can't sit on the far side of a thin wall; the original
+	// pulls out by (dmg - 24) * 0.6 (57.6 units for a 120 damage rocket), which also moves the
+	// centre of every explosion's radius damage
 	if (pTrace->flFraction != 1.0)
 	{
-		pev->origin = pTrace->vecEndPos + (pTrace->vecPlaneNormal * 0.6);
+		pev->origin = pTrace->vecEndPos + (pTrace->vecPlaneNormal * (pev->dmg - 24) * 0.6);
 	}
 
 	int iContents = UTIL_PointContents(pev->origin);
@@ -91,6 +98,8 @@ void CGrenade::Explode(TraceResult* pTrace, int bitsDamageType)
 
 	pev->owner = NULL; // can't traceline attack owner if this is set
 
+	// halflife-updated's fix, kept: the source is lowered 1 unit to counteract the + 1 in
+	// RadiusDamage (d6accf1, halflife#3244), as in mod-rockcrowbar; the original uses pev->origin
 	// Counteract the + 1 in RadiusDamage.
 	Vector origin = pev->origin;
 	origin.z -= 1;
@@ -135,6 +144,7 @@ void CGrenade::Explode(TraceResult* pTrace, int bitsDamageType)
 }
 
 
+// orig 0xc26f0
 void CGrenade::Smoke()
 {
 	if (UTIL_PointContents(pev->origin) == CONTENTS_WATER)
@@ -156,6 +166,7 @@ void CGrenade::Smoke()
 	UTIL_Remove(this);
 }
 
+// orig 0xc2890
 void CGrenade::Killed(entvars_t* pevAttacker, int iGib)
 {
 	Detonate();
@@ -163,12 +174,14 @@ void CGrenade::Killed(entvars_t* pevAttacker, int iGib)
 
 
 // Timed grenade, this think is called when time runs out.
+// orig 0xc28b0
 void CGrenade::DetonateUse(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value)
 {
 	SetThink(&CGrenade::Detonate);
 	pev->nextthink = gpGlobals->time;
 }
 
+// orig 0xc28f0
 void CGrenade::PreDetonate()
 {
 	CSoundEnt::InsertSound(bits_SOUND_DANGER, pev->origin, 400, 0.3);
@@ -178,6 +191,7 @@ void CGrenade::PreDetonate()
 }
 
 
+// orig 0xc2950
 void CGrenade::Detonate()
 {
 	TraceResult tr;
@@ -193,6 +207,7 @@ void CGrenade::Detonate()
 //
 // Contact grenade, explode when it touches something
 //
+// orig 0xc2a20
 void CGrenade::ExplodeTouch(CBaseEntity* pOther)
 {
 	TraceResult tr;
@@ -207,6 +222,7 @@ void CGrenade::ExplodeTouch(CBaseEntity* pOther)
 }
 
 
+// orig 0xc2be0
 void CGrenade::DangerSoundThink()
 {
 	if (!IsInWorld())
@@ -225,6 +241,7 @@ void CGrenade::DangerSoundThink()
 }
 
 
+// orig 0xc2d20. Oz: every bounce spins the grenade (the SDK's line, uncommented).
 void CGrenade::BounceTouch(CBaseEntity* pOther)
 {
 	// don't hit the guy that launched this grenade
@@ -246,7 +263,7 @@ void CGrenade::BounceTouch(CBaseEntity* pOther)
 	}
 
 	Vector vecTestVelocity;
-	// pev->avelocity = Vector (300, 300, 300);
+	pev->avelocity = Vector(300, 300, 300);
 
 	// this is my heuristic for modulating the grenade velocity because grenades dropped purely vertical
 	// or thrown very far tend to slow down too quickly for me to always catch just by testing velocity.
@@ -272,6 +289,8 @@ void CGrenade::BounceTouch(CBaseEntity* pOther)
 		pev->velocity = pev->velocity * 0.8;
 
 		pev->sequence = RANDOM_LONG(1, 1);
+		// halflife-updated's fix, kept: the new sequence gets its timing set up (2ee36b4), as
+		// mod-rc2's FIXES.md
 		ResetSequenceInfo();
 	}
 	else
@@ -285,12 +304,15 @@ void CGrenade::BounceTouch(CBaseEntity* pOther)
 	else if (pev->framerate < 0.5)
 	{
 		pev->framerate = 0;
+		// halflife-updated's fix, kept: the frame goes back to 0 too, so the grenade doesn't freeze
+		// mid-tumble (b31de2b, #238), as mod-rc2's FIXES.md
 		pev->frame = 0;
 	}
 }
 
 
 
+// orig 0xc3030
 void CGrenade::SlideTouch(CBaseEntity* pOther)
 {
 	// don't hit the guy that launched this grenade
@@ -315,6 +337,7 @@ void CGrenade::SlideTouch(CBaseEntity* pOther)
 	}
 }
 
+// orig 0xc30c0
 void CGrenade::BounceSound()
 {
 	switch (RANDOM_LONG(0, 2))
@@ -331,6 +354,7 @@ void CGrenade::BounceSound()
 	}
 }
 
+// orig 0xc3160
 void CGrenade::TumbleThink()
 {
 	if (!IsInWorld())
@@ -359,6 +383,7 @@ void CGrenade::TumbleThink()
 }
 
 
+// orig 0xc32d0
 void CGrenade::Spawn()
 {
 	pev->movetype = MOVETYPE_BOUNCE;
@@ -374,10 +399,12 @@ void CGrenade::Spawn()
 }
 
 
+// orig 0xc3390. Oz: classname "ARgrenade" (the kill messages' name), damage_m203.
 CGrenade* CGrenade::ShootContact(entvars_t* pevOwner, Vector vecStart, Vector vecVelocity)
 {
 	CGrenade* pGrenade = GetClassPtr((CGrenade*)NULL);
 	pGrenade->Spawn();
+	pGrenade->pev->classname = MAKE_STRING("ARgrenade");
 	// contact grenades arc lower
 	pGrenade->pev->gravity = 0.5; // lower gravity since grenade is aerodynamic and engine doesn't know it.
 	UTIL_SetOrigin(pGrenade->pev, vecStart);
@@ -395,12 +422,14 @@ CGrenade* CGrenade::ShootContact(entvars_t* pevOwner, Vector vecStart, Vector ve
 	// Explode on contact
 	pGrenade->SetTouch(&CGrenade::ExplodeTouch);
 
-	pGrenade->pev->dmg = gSkillData.plrDmgM203Grenade;
+	pGrenade->pev->dmg = oz_damagem203.value; // Oz variables (.value)
 
 	return pGrenade;
 }
 
 
+// orig 0xc34b0. Oz: damage_hgrenade; a grenade whose owner is dead (the Booby Trap Rune's drop)
+// does booby_trap_damage and is named "Booby Trap Rune" for the kill message.
 CGrenade* CGrenade::ShootTimed(entvars_t* pevOwner, Vector vecStart, Vector vecVelocity, float time)
 {
 	CGrenade* pGrenade = GetClassPtr((CGrenade*)NULL);
@@ -428,6 +457,8 @@ CGrenade* CGrenade::ShootTimed(entvars_t* pevOwner, Vector vecStart, Vector vecV
 	SET_MODEL(ENT(pGrenade->pev), "models/w_grenade.mdl");
 	pGrenade->pev->sequence = RANDOM_LONG(3, 6);
 	pGrenade->pev->framerate = 1.0;
+	// halflife-updated's fix, kept: the tumble sequence's timing is set up once the model is
+	// there (2ee36b4), as mod-rc2's FIXES.md; the original sets the model after these lines
 	pGrenade->ResetSequenceInfo();
 
 	// Tumble through the air
@@ -436,12 +467,60 @@ CGrenade* CGrenade::ShootTimed(entvars_t* pevOwner, Vector vecStart, Vector vecV
 	pGrenade->pev->gravity = 0.5;
 	pGrenade->pev->friction = 0.8;
 
-	pGrenade->pev->dmg = 100;
+	// Oz variables (.value)
+	if (pevOwner->health > 0)
+	{
+		pGrenade->pev->dmg = oz_damagehgrenade.value;
+	}
+	else
+	{
+		// Oz runes - booby trap
+		pGrenade->pev->dmg = oz_boobytrapdamage.value;
+		pGrenade->pev->classname = MAKE_STRING("Booby Trap Rune");
+	}
 
 	return pGrenade;
 }
 
 
+// orig 0xc36b0. Oz flare: ShootTimed's grenade with the flare model, a light and 5 damage.
+CGrenade* CGrenade::ShootFlare(entvars_t* pevOwner, Vector vecStart, Vector vecVelocity, float time)
+{
+	CGrenade* pGrenade = GetClassPtr((CGrenade*)NULL);
+	pGrenade->Spawn();
+	UTIL_SetOrigin(pGrenade->pev, vecStart);
+	pGrenade->pev->velocity = vecVelocity;
+	pGrenade->pev->angles = UTIL_VecToAngles(pGrenade->pev->velocity);
+	pGrenade->pev->owner = ENT(pevOwner);
+
+	pGrenade->SetTouch(&CGrenade::BounceTouch); // Bounce if touched
+
+	pGrenade->pev->dmgtime = gpGlobals->time + time;
+	pGrenade->SetThink(&CGrenade::TumbleThink);
+	pGrenade->pev->nextthink = gpGlobals->time + 0.1;
+	if (time < 0.1)
+	{
+		pGrenade->pev->nextthink = gpGlobals->time;
+		pGrenade->pev->velocity = Vector(0, 0, 0);
+	}
+
+	SET_MODEL(ENT(pGrenade->pev), "models/w_flare.mdl");
+	pGrenade->pev->sequence = RANDOM_LONG(3, 6);
+	pGrenade->pev->framerate = 1.0;
+	// halflife-updated's fix, kept: as in ShootTimed (2ee36b4)
+	pGrenade->ResetSequenceInfo();
+
+	pGrenade->pev->gravity = 0.5;
+	pGrenade->pev->friction = 0.8;
+
+	pGrenade->pev->dmg = 5;
+	pGrenade->pev->effects |= EF_LIGHT;
+
+	return pGrenade;
+}
+
+
+// orig 0xc3870
 CGrenade* CGrenade::ShootSatchelCharge(entvars_t* pevOwner, Vector vecStart, Vector vecVelocity)
 {
 	CGrenade* pGrenade = GetClassPtr((CGrenade*)NULL);
@@ -473,6 +552,7 @@ CGrenade* CGrenade::ShootSatchelCharge(entvars_t* pevOwner, Vector vecStart, Vec
 
 
 
+// orig 0xc39d0
 void CGrenade::UseSatchelCharges(entvars_t* pevOwner, SATCHELCODE code)
 {
 	edict_t* pentFind;
