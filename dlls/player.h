@@ -84,20 +84,21 @@ enum sbar_data
 
 #define CHAT_INTERVAL 1.0f
 
+class CGrappleBolt; // Oz grapple (grapple.cpp)
+
 class CBasePlayer : public CBaseMonster
 {
 public:
-	// Spectator camera
+	// Spectator camera. Oz: the original's observer is SDK 2.2's, in player.cpp: these three
+	// and StopObserver; halflife-updated's Observer_CheckTarget/CheckProperties are not in it.
 	void Observer_FindNextPlayer(bool bReverse);
 	void Observer_HandleButtons();
 	void Observer_SetMode(int iMode);
-	void Observer_CheckTarget();
-	void Observer_CheckProperties();
-	EHANDLE m_hObserverTarget;
-	float m_flNextObserverInput;
+	EHANDLE m_hObserverTarget;	 // orig +0x62c
+	float m_flNextObserverInput; // orig +0x634
 	int m_iObserverWeapon;	 // weapon of current tracked target
 	int m_iObserverLastMode; // last used observer mode
-	bool IsObserver() { return 0 != pev->iuser1; }
+	bool IsObserver() { return 0 != pev->iuser1; } // orig 0xfc9c0
 
 	int random_seed; // See that is shared between client & server for shared weapons code
 
@@ -219,15 +220,15 @@ public:
 	void TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir, TraceResult* ptr, int bitsDamageType) override;
 	bool TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType) override;
 	void Killed(entvars_t* pevAttacker, int iGib) override;
-	Vector BodyTarget(const Vector& posSrc) override { return Center() + pev->view_ofs * RANDOM_FLOAT(0.5, 1.1); } // position to shoot at
-	void StartSneaking() override { m_tSneaking = gpGlobals->time - 1; }
-	void StopSneaking() override { m_tSneaking = gpGlobals->time + 30; }
-	bool IsSneaking() override { return m_tSneaking <= gpGlobals->time; }
-	bool IsAlive() override { return (pev->deadflag == DEAD_NO) && pev->health > 0; }
-	bool ShouldFadeOnDeath() override { return false; }
-	bool IsPlayer() override { return true; } // Spectators should return false for this, they aren't "players" as far as game logic is concerned
+	Vector BodyTarget(const Vector& posSrc) override { return Center() + pev->view_ofs * RANDOM_FLOAT(0.5, 1.1); } // position to shoot at; orig 0xfcaf0
+	void StartSneaking() override { m_tSneaking = gpGlobals->time - 1; } // orig 0xfcac0
+	void StopSneaking() override { m_tSneaking = gpGlobals->time + 30; } // orig 0xfca90
+	bool IsSneaking() override { return m_tSneaking <= gpGlobals->time; } // orig 0xfca50
+	bool IsAlive() override { return (pev->deadflag == DEAD_NO) && pev->health > 0; } // orig 0xfca20
+	bool ShouldFadeOnDeath() override { return false; } // orig 0xfca10
+	bool IsPlayer() override { return true; } // orig 0xfca00; Spectators should return false for this, they aren't "players" as far as game logic is concerned
 
-	bool IsNetClient() override { return true; } // Bots should return false for this, they can't receive NET messages
+	bool IsNetClient() override { return true; } // orig 0xfc9f0; Bots should return false for this, they can't receive NET messages
 												 // Spectators should return true for this
 	const char* TeamID() override;
 
@@ -255,7 +256,7 @@ public:
 	static TYPEDESCRIPTION m_playerSaveData[];
 
 	// Player is moved across the transition by other means
-	int ObjectCaps() override { return CBaseMonster::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	int ObjectCaps() override { return CBaseMonster::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; } // orig 0xfc9e0 (0)
 	void Precache() override;
 	bool IsOnLadder();
 	bool FlashlightIsOn();
@@ -334,21 +335,52 @@ public:
 
 	void TabulateAmmo();
 
-	float m_flStartCharge;
-	float m_flAmmoStartCharge;
-	float m_flPlayAftershock;
-	float m_flNextAmmoBurn; // while charging, when to absorb another unit of player's ammo?
+	float m_flStartCharge;	   // orig +0x688
+	float m_flAmmoStartCharge; // orig +0x68c
+	float m_flPlayAftershock;  // orig +0x690
+	float m_flNextAmmoBurn;	   // orig +0x694; while charging, when to absorb another unit of player's ammo?
 
-	//Player ID
-	void InitStatusBar();
-	void UpdateStatusBar();
-	int m_izSBarState[SBAR_END];
-	float m_flNextSBarUpdateTime;
-	float m_flStatusBarDisappearDelay;
-	char m_SbarString0[SBAR_STRING_SIZE];
-	char m_SbarString1[SBAR_STRING_SIZE];
+	// Oz: the original has no status bar (SDK 2.3's InitStatusBar/UpdateStatusBar and their
+	// members); OZ's player ID is Identify.
 
 	float m_flNextChatTime;
+
+	// Oz: the methods OZ added (player.cpp)
+	void StopObserver();					// orig 0xf3500
+	void PlayerReleaseGrapple();			// orig 0xfb3f0
+	void MOTD(edict_t* client);				// orig 0xfb470
+	void Identify();						// orig 0xfb8c0
+	void RemoveRune();						// orig 0xfbc80
+	void PlayerMessage(edict_t* client);	// orig 0xfc1f0
+	void DetectCheats();					// orig 0xfc420
+	void Teleport();						// orig 0xfc630
+
+	// Oz: the members OZ added, none saved. Offsets are the original's; names from the OZ 1.7
+	// source where it has the member, else from what the code does (VERIFY).
+	// 3.02 has no CTF: 1.7's CBaseEntity::ctf_team/captures and the player's ctf_has* flags are
+	// gone (no ctf cvar, entity or string in the binary), and the rune booleans became m_iRune.
+	CGrappleBolt* pGrappleBolt; // orig +0x638; the player's grappling hook bolt, if out
+	bool IsHanging;				// orig +0x63c; hanging on the grapple (PFLAG_ONTRAIN is set meanwhile)
+	bool Flare;					// orig +0x640; the hand grenade throws a flare (CHandGrenade)
+	int m_iStart;				// orig +0x644; frames since spawn, to 26: at 25 the observer-mode help. VERIFY name
+	int m_iCommands;			// orig +0x648; frames to 26: at 25 the console help, at 26 oz_line1/oz_line2 (27)
+	int m_iOz;					// orig +0x64c; frames to 26: at 25 the "Oz Deathmatch v3.02" title
+	int m_iMOTDTimer;				// orig +0x650; frames to 26: at 25 the MOTD (or oz_picture). VERIFY name
+	int m_iNameCheckTimer;			// orig +0x654; frames to 26: at 25 a player named "Player" gets PlayerMessage. VERIFY name
+	int m_iObserver;			// orig +0x658; 1 from StartObserver's spectator mode to StopObserver. VERIFY name
+	int m_iRuneHudTime;			// orig +0x65c; frames until UpdateRuneInfo redraws the rune HUD (900). VERIFY name
+	int m_iSpawnProtect;		// orig +0x660; frames of spawn protection, to 120 (or attack). VERIFY name
+	int m_iTeleportTime;		// orig +0x664; time (whole seconds) the teleport rune works again. VERIFY name
+	int m_iFirst;				// orig +0x668; 0: the next PlayerSpawn puts the player in observer mode
+	int didhaveexploderune;		// orig +0x66c; only cleared in Spawn in 3.02
+	int wassuicide;				// orig +0x670; the death was the player's own doing: no booby trap blast
+	int m_iRune;				// orig +0x674; rune carried, GetRuneName's numbering (0 none, 1-15). VERIFY name
+	int m_iRandomRune;			// orig +0x678; the rune came from a random rune: drops as one (15). VERIFY name
+	float regencounter;			// orig +0x67c; frames counted toward the regeneration rune's next tick (30)
+								// orig +0x680: 4 bytes no code touches
+	float m_flCloakTime;		// orig +0x684; the cloaking rune shows the player until this time. VERIFY name
+	int m_iBotFovCheck;			// orig +0x698; aimbot probes sent unanswered. VERIFY name
+	int m_iWallhackCheck;		// orig +0x69c; wallhack probes sent unanswered. VERIFY name
 
 	void SetPrefsFromUserinfo(char* infobuffer);
 
