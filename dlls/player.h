@@ -358,6 +358,9 @@ public:
 
 	//True if the player is currently spawning.
 	bool m_bIsSpawning = false;
+
+	// weapons-a needs:
+	int m_iRune = 0; // orig +0x674: the rune held (3 super crowbar, 4 haste, 11 super glock); the items package declares it too, same name
 };
 
 inline void CBasePlayer::SetWeaponBit(int id)

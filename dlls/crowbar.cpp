@@ -20,13 +20,15 @@
 #include "weapons.h"
 #include "player.h"
 #include "gamerules.h"
+#include "game.h"
 
 
 #define CROWBAR_BODYHIT_VOLUME 128
 #define CROWBAR_WALLHIT_VOLUME 512
 
-LINK_ENTITY_TO_CLASS(weapon_crowbar, CCrowbar);
+LINK_ENTITY_TO_CLASS(weapon_crowbar, CCrowbar); // orig 0xa4f70
 
+// orig 0xa4f90
 void CCrowbar::Spawn()
 {
 	Precache();
@@ -38,6 +40,7 @@ void CCrowbar::Spawn()
 }
 
 
+// orig 0xa4ff0
 void CCrowbar::Precache()
 {
 	PRECACHE_MODEL("models/v_crowbar.mdl");
@@ -49,10 +52,12 @@ void CCrowbar::Precache()
 	PRECACHE_SOUND("weapons/cbar_hitbod2.wav");
 	PRECACHE_SOUND("weapons/cbar_hitbod3.wav");
 	PRECACHE_SOUND("weapons/cbar_miss1.wav");
+	UTIL_PrecacheOther("flying_crowbar"); // OZ: what SecondaryAttack throws
 
 	m_usCrowbar = PRECACHE_EVENT(1, "events/crowbar.sc");
 }
 
+// orig 0xa50e0
 bool CCrowbar::GetItemInfo(ItemInfo* p)
 {
 	p->pszName = STRING(pev->classname);
@@ -64,17 +69,19 @@ bool CCrowbar::GetItemInfo(ItemInfo* p)
 	p->iSlot = 0;
 	p->iPosition = 0;
 	p->iId = WEAPON_CROWBAR;
-	p->iWeight = CROWBAR_WEIGHT;
+	p->iWeight = (int)oz_weightcrowbar.value;
 	return true;
 }
 
 
 
+// orig 0xa5180
 bool CCrowbar::Deploy()
 {
 	return DefaultDeploy("models/v_crowbar.mdl", "models/p_crowbar.mdl", CROWBAR_DRAW, "crowbar");
 }
 
+// orig 0xa51c0
 void CCrowbar::Holster()
 {
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
@@ -82,6 +89,7 @@ void CCrowbar::Holster()
 }
 
 
+// orig 0xa5220
 void FindHullIntersection(const Vector& vecSrc, TraceResult& tr, const Vector& mins, const Vector& maxs, edict_t* pEntity)
 {
 	int i, j, k;
@@ -127,6 +135,7 @@ void FindHullIntersection(const Vector& vecSrc, TraceResult& tr, const Vector& m
 }
 
 
+// orig 0xa5450
 void CCrowbar::PrimaryAttack()
 {
 	if (!Swing(true))
@@ -137,18 +146,53 @@ void CCrowbar::PrimaryAttack()
 }
 
 
+// orig 0xa54b0. OZ: throws the crowbar (flying_crowbar). Without the Super Crowbar rune the thrower
+// loses it; with it he keeps it and can throw again on the next cycle.
+void CCrowbar::SecondaryAttack()
+{
+	if (m_pPlayer->pev->waterlevel == 3)
+		return;
+
+	// No UTIL_MakeVectors here: the original uses whatever gpGlobals->v_* hold (the last weapon frame's).
+	Vector vecSrc = m_pPlayer->GetGunPosition() + gpGlobals->v_right * 8 + gpGlobals->v_forward * 16;
+	Vector vecDir = gpGlobals->v_forward;
+	Vector vecAngles = UTIL_VecToAngles(vecDir);
+	vecAngles.z = vecDir.z - 90; // sic: the forward vector's z, not the angle's
+
+	CBaseEntity* pCrowbar = CBaseEntity::Create("flying_crowbar", vecSrc, Vector(0, 0, 0), m_pPlayer->edict());
+	pCrowbar->pev->velocity = vecDir * 1000 + m_pPlayer->pev->velocity;
+	pCrowbar->pev->angles = vecAngles;
+	pCrowbar->pev->avelocity.x = -1000;
+	pCrowbar->pev->gravity = 0.5;
+	static_cast<CBasePlayerWeapon*>(pCrowbar)->m_pPlayer = m_pPlayer; // a CFlyingCrowbar
+
+	m_pPlayer->SetAnimation(PLAYER_ATTACK1);
+	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + oz_cyclecrowbar.value;
+
+	if (m_pPlayer->m_iRune != 3) // Super Crowbar Rune
+	{
+		m_pPlayer->pev->weapons &= ~(1 << m_iId);
+		DestroyItem();
+	}
+}
+
+
+// orig 0xa56f0
 void CCrowbar::Smack()
 {
 	DecalGunshot(&m_trHit, BULLET_PLAYER_CROWBAR);
 }
 
 
+// orig 0xa5720
 void CCrowbar::SwingAgain()
 {
 	Swing(false);
 }
 
 
+// orig 0xa5750. OZ: cycle times from oz_cyclecrowbar/oz_cyclecrowbar2 (halved by the Haste Rune),
+// damage from oz_damagecrowbar, 1000 with the Super Crowbar Rune.
 bool CCrowbar::Swing(bool fFirst)
 {
 	bool fDidHit = false;
@@ -177,6 +221,8 @@ bool CCrowbar::Swing(bool fFirst)
 	}
 #endif
 
+	// halflife-updated's fix, kept: the original played the swing event on every call, so SwingAgain
+	// played it twice (6528126, halflife#3230)
 	if (fFirst)
 	{
 		PLAYBACK_EVENT_FULL(FEV_NOTHOST, m_pPlayer->edict(), m_usCrowbar,
@@ -190,7 +236,10 @@ bool CCrowbar::Swing(bool fFirst)
 		if (fFirst)
 		{
 			// miss
-			m_flNextPrimaryAttack = GetNextAttackDelay(0.5);
+			if (m_pPlayer->m_iRune == 4) // Haste Rune
+				m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclecrowbar.value * 0.5;
+			else
+				m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclecrowbar.value;
 
 			// player "shoot" animation
 			m_pPlayer->SetAnimation(PLAYER_ATTACK1);
@@ -224,21 +273,33 @@ bool CCrowbar::Swing(bool fFirst)
 
 		// JoshA: Changed from < -> <= to fix the full swing logic since client weapon prediction.
 		// -1.0f + 1.0f = 0.0f. UTIL_WeaponTimeBase is always 0 with client weapon prediction (0 time base vs curtime base)
+		// halflife-updated's fix, kept: the original's < (a542e4a, HL25); in multiplayer every swing is full anyway
 		if ((m_flNextPrimaryAttack + 1.0f <= UTIL_WeaponTimeBase()) || g_pGameRules->IsMultiplayer())
 		{
 			// first swing does full damage
-			pEntity->TraceAttack(m_pPlayer->pev, gSkillData.plrDmgCrowbar, gpGlobals->v_forward, &tr, DMG_CLUB);
+			if (m_pPlayer->m_iRune == 3) // Super Crowbar Rune
+				pEntity->TraceAttack(m_pPlayer->pev, 1000, gpGlobals->v_forward, &tr, DMG_CLUB);
+			else
+				pEntity->TraceAttack(m_pPlayer->pev, oz_damagecrowbar.value, gpGlobals->v_forward, &tr, DMG_CLUB);
 		}
 		else
 		{
 			// subsequent swings do half
-			pEntity->TraceAttack(m_pPlayer->pev, gSkillData.plrDmgCrowbar / 2, gpGlobals->v_forward, &tr, DMG_CLUB);
+			if (m_pPlayer->m_iRune == 3)
+				pEntity->TraceAttack(m_pPlayer->pev, 1000, gpGlobals->v_forward, &tr, DMG_CLUB);
+			else
+				pEntity->TraceAttack(m_pPlayer->pev, oz_damagecrowbar.value * 0.5, gpGlobals->v_forward, &tr, DMG_CLUB);
 		}
 		ApplyMultiDamage(m_pPlayer->pev, m_pPlayer->pev);
 
 #endif
 
-		m_flNextPrimaryAttack = GetNextAttackDelay(0.25);
+		// halflife-updated's fix, kept: the original set this at the end, after the return for a dead
+		// target, so a corpse took swings with no delay (511c6ef, halflife#2590)
+		if (m_pPlayer->m_iRune == 4) // Haste Rune
+			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclecrowbar2.value * 0.5;
+		else
+			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclecrowbar2.value;
 
 #ifndef CLIENT_DLL
 		// play thwack, smack, or dong sound
@@ -305,6 +366,8 @@ bool CCrowbar::Swing(bool fFirst)
 		m_pPlayer->m_iWeaponVolume = flVol * CROWBAR_WALLHIT_VOLUME;
 #endif
 		SetThink(&CCrowbar::Smack);
+		// halflife-updated's fix, kept: the original's UTIL_WeaponTimeBase() + 0.2 is 0.2 here, so the
+		// decal went on at once (c90351f, halflife#2296)
 		pev->nextthink = gpGlobals->time + 0.2;
 	}
 	return fDidHit;
