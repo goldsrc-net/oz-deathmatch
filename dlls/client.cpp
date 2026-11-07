@@ -2066,3 +2066,8 @@ int AllowLagCompensation()
 {
 	return 1;
 }
+
+// TEMP STUB (base): real one belongs in client.cpp, orig 0x975f0 (the rune HUD text).
+void CBasePlayer::UpdateRuneInfo()
+{
+}

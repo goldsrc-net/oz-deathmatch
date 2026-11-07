@@ -337,6 +337,8 @@ public:
 
 	virtual void StopFollowing(bool clearSchedule) {}
 
+	virtual void BotThink() {} // Oz: orig 0xd7920 (monsters.cpp), empty; CBaseBot's runs the bot
+
 	inline void Remember(int iMemory) { m_afMemory |= iMemory; }
 	inline void Forget(int iMemory) { m_afMemory &= ~iMemory; }
 	inline bool HasMemory(int iMemory)

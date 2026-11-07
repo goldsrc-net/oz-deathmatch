@@ -209,6 +209,7 @@ public:
 	void Pain();
 
 	//	void Think() override;
+	virtual bool IsBot() { return (pev->flags & FL_FAKECLIENT) != 0; } // Oz: orig 0xfcb90 (player.cpp); VERIFY: returns the masked flag
 	virtual void Jump();
 	virtual void Duck();
 	virtual void PreThink();
@@ -271,6 +272,7 @@ public:
 
 	// custom player functions
 	virtual void ImpulseCommands();
+	virtual void UpdateRuneInfo(); // Oz: orig 0x975f0 (client.cpp)
 	void CheatImpulseCommands(int iImpulse);
 
 	void StartDeathCam();

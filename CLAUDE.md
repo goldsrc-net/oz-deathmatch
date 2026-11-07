@@ -45,7 +45,12 @@ site links (`/media/Data3/Projects/mods/oz/downloads/`).
 - Scaffolded per `../DECOMPILE.md` sections 1-4: the gamedir manifest, the reference libraries,
   build.sh (stock SDK builds on i386 and amd64), the tables (`reference/RECONSTRUCTION.md`: 2,964
   functions, 246 in OZ's 12 own files; 391 cvars, 329 not in our build; 83 OZ-only entities).
-- OZ's CBaseEntity is 0x30 bytes bigger than RC 1.9's: the vtable pointer is at 0x60 (read off the
-  virtual calls in the disassembly), so OZ added members to it.
-- Next: section 5 (cvars, the base-class virtuals and members, OZ's own base classes, placeholder
-  files), then the packages. The 1.7 source's `// Oz` markers say which stock functions OZ changed.
+- Built on SDK 2.3 with `CLIENT_WEAPONS`, like this repo: the vtable pointer sits at +0x60, after
+  SDK 2.3's own CBaseEntity members (the `ammo_*` and throw/charge fields RC 1.9's SDK 2.1 lacks).
+- Section 5 done: OZ's 386 cvars in `game.cpp`/`game.h` in the original's order (decisions in
+  `reference/DEVIATIONS.md`), OZ's base virtuals (`CBaseMonster::BotThink`,
+  `CBasePlayer::IsBot`/`UpdateRuneInfo`, SDK 2.x's `CBasePlayerWeapon::AddWeapon`), placeholders
+  for OZ's own files. OZ has no shared base classes of its own; its four classes with vtables
+  (`CBaseBot`, `CGrappleBolt`, `CFlyingCrowbar`, `CRune`) each go with their file.
+- Next: section 6, the packages (`reference/dossiers/AGENT_BRIEF.md`). The 1.7 source's `// Oz`
+  markers say which stock functions OZ changed.

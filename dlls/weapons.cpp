@@ -995,6 +995,13 @@ bool CBasePlayerWeapon::ExtractClipAmmo(CBasePlayerWeapon* pWeapon)
 	return pWeapon->m_pPlayer->GiveAmmo(iAmmo, pszAmmo1(), iMaxAmmo1()) != 0; // , &m_iPrimaryAmmoType
 }
 
+// orig 0x12c330. The weapons package wires up its callers (AddToPlayer in the original).
+bool CBasePlayerWeapon::AddWeapon()
+{
+	ExtractAmmo(this);
+	return true;
+}
+
 //=========================================================
 // RetireWeapon - no more ammo for this gun, put it away.
 //=========================================================

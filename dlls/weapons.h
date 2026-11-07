@@ -302,6 +302,7 @@ public:
 
 	virtual bool ExtractAmmo(CBasePlayerWeapon* pWeapon);	  //{ return true; }			// Return true if you can add ammo to yourself when picked up
 	virtual bool ExtractClipAmmo(CBasePlayerWeapon* pWeapon); // { return true; }			// Return true if you can add ammo to yourself when picked up
+	virtual bool AddWeapon(); // the SDK 2.x virtual OZ still has: ExtractAmmo(this)
 
 	// generic "shared" ammo handlers
 	bool AddPrimaryAmmo(CBasePlayerWeapon* origin, int iCount, char* szName, int iMaxClip, int iMaxCarry);
