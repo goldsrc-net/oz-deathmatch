@@ -1,0 +1,15 @@
+//-- mod-ozdm : Oz Deathmatch 3.02 rebuilt on halflife-updated @ 64bit-demo
+//
+// Mounts as `oz/` and falls back to valve/ for everything it does not override.
+// Server-only like the original (svonly 1, cldll 0): clients use Half-Life's own
+// client library and download nothing.
+game "Oz DM 3.02"
+gamedir "oz"
+fallback_dir "valve"
+version "3.02"
+mpentity "info_player_deathmatch"
+gamedll "dlls\hl.dll"
+gamedll_linux "dlls/hl.so"
+svonly "1"
+cldll "0"
+type "multiplayer_only"
