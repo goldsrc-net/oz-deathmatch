@@ -27,6 +27,12 @@ void LinkUserMessages()
 		return;
 	}
 
+	// orig 0xf0350 (the original's LinkUserMessages is in player.cpp). Its list: SelAmmo first, Health 1
+	// byte, no StatusText/StatusValue. Kept from halflife-updated: Health as 2 bytes (5a0c6c1,
+	// halflife#2149, health over 255; player.cpp's writer must match), StatusText/StatusValue (player.cpp's
+	// status bar sends them; a send with an unregistered id 0 would break the client) and Weapons (this
+	// tree's weapon bits).
+	gmsgSelAmmo = REG_USER_MSG("SelAmmo", 4);
 	gmsgCurWeapon = REG_USER_MSG("CurWeapon", 3);
 	gmsgGeigerRange = REG_USER_MSG("Geiger", 1);
 	gmsgFlashlight = REG_USER_MSG("Flashlight", 2);

@@ -176,6 +176,7 @@ bool CVoiceGameMgr::ClientCommand(CBasePlayer* pPlayer, const char* cmd)
 		{
 			uint32 mask = 0;
 
+			// halflife-updated's fix, kept: a mask that doesn't parse is skipped, not read as 0 (3e9a8f0, #91)
 			if (1 == sscanf(CMD_ARGV(i), "%x", &mask) && i <= VOICE_MAX_PLAYERS_DW)
 			{
 				VoiceServerDebug("CVoiceGameMgr::ClientCommand: vban (0x%x) from %d\n", mask, playerClientIndex);
@@ -208,11 +209,14 @@ bool CVoiceGameMgr::ClientCommand(CBasePlayer* pPlayer, const char* cmd)
 }
 
 
+// orig 0x131da0. The original (SDK 2.3) reads sv_alltalk by name, so the engine's own cvar counts
+// when Init found one and didn't register ours; Valve's 2013 SDK reads our struct. Its inner loop
+// also tests IsPlayer, which the 2013 SDK dropped.
 void CVoiceGameMgr::UpdateMasks()
 {
 	m_UpdateInterval = 0;
 
-	bool bAllTalk = 0 != sv_alltalk.value;
+	bool bAllTalk = 0 != CVAR_GET_FLOAT("sv_alltalk");
 
 	for (int iClient = 0; iClient < m_nMaxPlayers; iClient++)
 	{
@@ -236,7 +240,7 @@ void CVoiceGameMgr::UpdateMasks()
 			for (int iOtherClient = 0; iOtherClient < m_nMaxPlayers; iOtherClient++)
 			{
 				CBaseEntity* pEnt = UTIL_PlayerByIndex(iOtherClient + 1);
-				if (pEnt && (bAllTalk || m_pHelper->CanPlayerHearPlayer(pPlayer, (CBasePlayer*)pEnt)))
+				if (pEnt && pEnt->IsPlayer() && (bAllTalk || m_pHelper->CanPlayerHearPlayer(pPlayer, (CBasePlayer*)pEnt)))
 				{
 					gameRulesMask[iOtherClient] = true;
 				}

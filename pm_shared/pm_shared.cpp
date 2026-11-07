@@ -131,6 +131,8 @@ static char grgchTextureType[CTEXTURESMAX];
 
 bool g_onladder = false;
 
+// Not in the original. halflife-updated's fix, kept: PM_LadderMove's model trace starts from a
+// cleared trace (f2f5ecc, ValveSoftware/halflife#3283); the original calls pmove->PM_TraceModel directly.
 static void PM_InitTrace(trace_t* trace, const Vector& end)
 {
 	memset(trace, 0, sizeof(*trace));
@@ -145,6 +147,7 @@ static void PM_TraceModel(physent_t* pEnt, const Vector& start, const Vector& en
 	pmove->PM_TraceModel(pEnt, start, end, trace);
 }
 
+// orig 0x1336f0
 void PM_SwapTextures(int i, int j)
 {
 	char chTemp;
@@ -160,6 +163,7 @@ void PM_SwapTextures(int i, int j)
 	grgchTextureType[j] = chTemp;
 }
 
+// orig 0x133790
 void PM_SortTextures()
 {
 	// Bubble sort, yuck, but this only occurs at startup and it's only 512 elements...
@@ -180,6 +184,7 @@ void PM_SortTextures()
 	}
 }
 
+// orig 0x133810
 void PM_InitTextureTypes()
 {
 	char buffer[512];
@@ -250,6 +255,7 @@ void PM_InitTextureTypes()
 	bTextureTypeInit = true;
 }
 
+// orig 0x133ae0
 char PM_FindTextureType(const char* name)
 {
 	int left, right, pivot;
@@ -282,6 +288,7 @@ char PM_FindTextureType(const char* name)
 	return CHAR_TEX_CONCRETE;
 }
 
+// orig 0x133ba0
 void PM_PlayStepSound(int step, float fvol)
 {
 	static int iSkipStep = 0;
@@ -504,6 +511,7 @@ void PM_PlayStepSound(int step, float fvol)
 	}
 }
 
+// orig 0x134380
 int PM_MapTextureTypeStepType(char chTextureType)
 {
 	switch (chTextureType)
@@ -533,6 +541,7 @@ PM_CatagorizeTextureType
 Determine texture info for the texture we are standing on.
 ====================
 */
+// orig 0x134470
 void PM_CatagorizeTextureType()
 {
 	Vector start, end;
@@ -567,6 +576,7 @@ void PM_CatagorizeTextureType()
 	pmove->chtexturetype = PM_FindTextureType(pmove->sztexturename);
 }
 
+// orig 0x134580
 void PM_UpdateStepSound()
 {
 	float fvol;
@@ -710,6 +720,7 @@ PM_AddToTouched
 Add's the trace result to touch list, if contact is not already in list.
 ================
 */
+// orig 0x1349b0
 bool PM_AddToTouched(pmtrace_t tr, Vector impactvelocity)
 {
 	int i;
@@ -738,6 +749,7 @@ PM_CheckVelocity
 See if the player has a bogus velocity value.
 ================
 */
+// orig 0x134ab0
 void PM_CheckVelocity()
 {
 	int i;
@@ -783,6 +795,7 @@ returns the blocked flags:
 0x02 == step / wall
 ==================
 */
+// orig 0x134c00
 int PM_ClipVelocity(Vector in, Vector normal, Vector& out, float overbounce)
 {
 	float backoff;
@@ -815,6 +828,7 @@ int PM_ClipVelocity(Vector in, Vector normal, Vector& out, float overbounce)
 	return blocked;
 }
 
+// orig 0x134cc0
 void PM_AddCorrectGravity()
 {
 	float ent_gravity;
@@ -837,6 +851,7 @@ void PM_AddCorrectGravity()
 }
 
 
+// orig 0x134d70
 void PM_FixupGravityVelocity()
 {
 	float ent_gravity;
@@ -862,6 +877,7 @@ PM_FlyMove
 The basic solid body movement clip that slides along multiple planes
 ============
 */
+// orig 0x134df0
 int PM_FlyMove()
 {
 	int bumpcount, numbumps;
@@ -969,6 +985,8 @@ int PM_FlyMove()
 
 		// modify original_velocity so it parallels all of the clip planes
 		//
+		// halflife-updated's fix, kept: reflect off the first plane only (HL25, 854187a); the original
+		// reflects off every plane, which can wedge a jumping player in an acute corner.
 		// relfect player velocity
 		// Only give this a try for first impact plane because you can get yourself stuck in an acute corner by jumping in place
 		//  and pressing forward and nobody was really using this bounce/reflection feature anyway...
@@ -1056,6 +1074,7 @@ int PM_FlyMove()
 PM_Accelerate
 ==============
 */
+// orig 0x135450
 void PM_Accelerate(Vector wishdir, float wishspeed, float accel)
 {
 	int i;
@@ -1100,6 +1119,7 @@ PM_WalkMove
 Only used by players.  Moves along the ground when player is a MOVETYPE_WALK.
 ======================
 */
+// orig 0x135510
 void PM_WalkMove()
 {
 	int clip;
@@ -1266,6 +1286,7 @@ PM_Friction
 Handles both ground friction and water friction
 ==================
 */
+// orig 0x135a90
 void PM_Friction()
 {
 	float* vel;
@@ -1342,6 +1363,7 @@ void PM_Friction()
 	VectorCopy(newvel, pmove->velocity);
 }
 
+// orig 0x135c60
 void PM_AirAccelerate(Vector wishdir, float wishspeed, float accel)
 {
 	int i;
@@ -1384,6 +1406,7 @@ PM_WaterMove
 
 ===================
 */
+// orig 0x135d40
 void PM_WaterMove()
 {
 	int i;
@@ -1480,6 +1503,7 @@ PM_AirMove
 
 ===================
 */
+// orig 0x1360c0
 void PM_AirMove()
 {
 	int i;
@@ -1526,6 +1550,7 @@ void PM_AirMove()
 	PM_FlyMove();
 }
 
+// orig 0x136230
 bool PM_InWater()
 {
 	return (pmove->waterlevel > 1);
@@ -1538,6 +1563,7 @@ PM_CheckWater
 Sets pmove->waterlevel and pmove->watertype values.
 =============
 */
+// orig 0x136260
 bool PM_CheckWater()
 {
 	Vector point;
@@ -1608,6 +1634,7 @@ bool PM_CheckWater()
 PM_CatagorizePosition
 =============
 */
+// orig 0x136470
 void PM_CatagorizePosition()
 {
 	Vector point;
@@ -1669,6 +1696,7 @@ When a player is stuck, it's costly to try and unstick them
 Grab a test offset for the player based on a passed in index
 =================
 */
+// orig 0x1365c0
 int PM_GetRandomStuckOffsets(int nIndex, int server, Vector& offset)
 {
 	// Last time we did a full
@@ -1680,6 +1708,7 @@ int PM_GetRandomStuckOffsets(int nIndex, int server, Vector& offset)
 	return (idx % 54);
 }
 
+// orig 0x136650
 void PM_ResetStuckOffsets(int nIndex, int server)
 {
 	rgStuckLast[nIndex][server] = 0;
@@ -1696,6 +1725,7 @@ allow for the cut precision of the net coordinates
 */
 #define PM_CHECKSTUCK_MINTIME 0.05 // Don't check again too quickly.
 
+// Not in the original: halflife-updated's (see the fix comments where it is called)
 bool PM_TryToUnstuck(Vector base)
 {
 	float x, y, z;
@@ -1728,6 +1758,7 @@ bool PM_TryToUnstuck(Vector base)
 	return true;
 }
 
+// orig 0x136690
 bool PM_CheckStuck()
 {
 	Vector base;
@@ -1752,6 +1783,9 @@ bool PM_CheckStuck()
 	//
 	// Deal with precision error in network and cases where the player can get stuck on level transitions in singleplayer.
 	//
+	// halflife-updated's fix, kept: the nudge loop and the level-change unstick below also run on a
+	// singleplayer server (854187a, 1d0831a). The original runs the loop on the client only; in
+	// multiplayer neither change does anything (g_CheckForPlayerStuck is set only by a save restore).
 	if (0 == pmove->server || 0 == pmove->multiplayer)
 	{
 		// World or BSP model
@@ -1846,6 +1880,7 @@ bool PM_CheckStuck()
 PM_SpectatorMove
 ===============
 */
+// orig 0x136a50
 void PM_SpectatorMove()
 {
 	float speed, drop, friction, control, newspeed;
@@ -1976,6 +2011,7 @@ Use for ease-in, ease-out style interpolation (accel/decel)
 Used by ducking code.
 ==================
 */
+// orig 0x136e20
 float PM_SplineFraction(float value, float scale)
 {
 	float valueSquared;
@@ -1987,6 +2023,7 @@ float PM_SplineFraction(float value, float scale)
 	return 3 * valueSquared - 2 * valueSquared * value;
 }
 
+// orig 0x136e60
 void PM_FixPlayerCrouchStuck(int direction)
 {
 	int hitent;
@@ -2009,6 +2046,7 @@ void PM_FixPlayerCrouchStuck(int direction)
 	VectorCopy(test, pmove->origin); // Failed
 }
 
+// orig 0x136f30
 void PM_UnDuck()
 {
 	int i;
@@ -2043,7 +2081,7 @@ void PM_UnDuck()
 
 		pmove->flags &= ~FL_DUCKING;
 		pmove->bInDuck = 0;
-		pmove->view_ofs = VEC_VIEW;
+		pmove->view_ofs[2] = VEC_VIEW[2]; // the original sets only z
 		pmove->flDuckTime = 0;
 
 		VectorCopy(newOrigin, pmove->origin);
@@ -2053,6 +2091,7 @@ void PM_UnDuck()
 	}
 }
 
+// orig 0x137090
 void PM_Duck()
 {
 	int i;
@@ -2112,7 +2151,7 @@ void PM_Duck()
 					(pmove->onground == -1))
 				{
 					pmove->usehull = 1;
-					pmove->view_ofs = VEC_DUCK_VIEW;
+					pmove->view_ofs[2] = VEC_DUCK_VIEW[2]; // the original sets only z
 					pmove->flags |= FL_DUCKING;
 					pmove->bInDuck = 0;
 
@@ -2148,6 +2187,7 @@ void PM_Duck()
 	}
 }
 
+// orig 0x137380
 void PM_LadderMove(physent_t* pLadder)
 {
 	Vector ladderCenter;
@@ -2179,20 +2219,12 @@ void PM_LadderMove(physent_t* pLadder)
 	{
 		float forward = 0, right = 0;
 		Vector vpn, v_right;
-		float flSpeed = MAX_CLIMB_SPEED;
-
-		// they shouldn't be able to move faster than their maxspeed
-		if (flSpeed > pmove->maxspeed)
-		{
-			flSpeed = pmove->maxspeed;
-		}
+		// The original climbs at MAX_CLIMB_SPEED whatever the player's maxspeed or ducking: the
+		// 2013 SDK's maxspeed cap and ducked climb speed (seed de70fad, after SDK 2.3) are a
+		// design change, so the original's speed is back.
+		const float flSpeed = MAX_CLIMB_SPEED;
 
 		AngleVectors(pmove->angles, &vpn, &v_right, NULL);
-
-		if ((pmove->flags & FL_DUCKING) != 0)
-		{
-			flSpeed *= PLAYER_DUCKING_MULTIPLIER;
-		}
 
 		if ((pmove->cmd.buttons & IN_BACK) != 0)
 		{
@@ -2270,6 +2302,7 @@ void PM_LadderMove(physent_t* pLadder)
 	}
 }
 
+// orig 0x137780
 physent_t* PM_Ladder()
 {
 	int i;
@@ -2304,6 +2337,7 @@ physent_t* PM_Ladder()
 
 
 
+// orig 0x137890
 void PM_WaterJump()
 {
 	if (pmove->waterjumptime > 10000)
@@ -2332,6 +2366,7 @@ PM_AddGravity
 
 ============
 */
+// orig 0x137970
 void PM_AddGravity()
 {
 	float ent_gravity;
@@ -2354,6 +2389,7 @@ PM_PushEntity
 Does not change the entities velocity at all
 ============
 */
+// orig 0x1379f0
 pmtrace_t PM_PushEntity(Vector push)
 {
 	pmtrace_t trace;
@@ -2382,6 +2418,7 @@ PM_Physics_Toss()
 Dead player flying through air., e.g.
 ============
 */
+// orig 0x137ae0
 void PM_Physics_Toss()
 {
 	pmtrace_t trace;
@@ -2487,6 +2524,7 @@ PM_NoClip
 
 ====================
 */
+// orig 0x137e90
 void PM_NoClip()
 {
 	int i;
@@ -2523,8 +2561,11 @@ void PM_NoClip()
 //  running PM_AirMove, which doesn't crop velocity to maxspeed like the ground / other
 //  movement logic does.
 //-----------------------------------------------------------------------------
+// orig 0x137f80
 void PM_PreventMegaBunnyJumping()
 {
+	// halflife-updated's sv_allowbunnyhopping (a1cf2d3), kept: the original always caps. With the
+	// cvar at its default 0, StartFrame sends "bj" 0 and this caps as the original does.
 	const bool allowBunnyHopping = atoi(pmove->PM_Info_ValueForKey(pmove->physinfo, "bj")) == 1;
 
 	if (allowBunnyHopping)
@@ -2560,6 +2601,7 @@ void PM_PreventMegaBunnyJumping()
 PM_Jump
 =============
 */
+// orig 0x138010
 void PM_Jump()
 {
 	int i;
@@ -2645,6 +2687,7 @@ void PM_Jump()
 
 	PM_PreventMegaBunnyJumping();
 
+	// halflife-updated's fix, kept: no jump sound while frozen (f3810c7).
 	// Don't play jump sounds while frozen.
 	if ((pmove->flags & FL_FROZEN) == 0)
 	{
@@ -2704,6 +2747,7 @@ PM_CheckWaterJump
 =============
 */
 #define WJ_HEIGHT 8
+// orig 0x138440
 void PM_CheckWaterJump()
 {
 	Vector vecStart, vecEnd;
@@ -2768,6 +2812,7 @@ void PM_CheckWaterJump()
 	pmove->usehull = savehull;
 }
 
+// orig 0x1386b0
 void PM_CheckFalling()
 {
 	if (pmove->onground != -1 &&
@@ -2842,6 +2887,7 @@ PM_PlayWaterSounds
 
 =================
 */
+// orig 0x1388c0
 void PM_PlayWaterSounds()
 {
 	// Did we enter or leave water?
@@ -2872,6 +2918,7 @@ PM_CalcRoll
 
 ===============
 */
+// orig 0x1389e0
 float PM_CalcRoll(Vector angles, Vector velocity, float rollangle, float rollspeed)
 {
 	float sign;
@@ -2907,6 +2954,7 @@ PM_DropPunchAngle
 
 =============
 */
+// orig 0x138a70
 void PM_DropPunchAngle(Vector& punchangle)
 {
 	float len;
@@ -2923,6 +2971,7 @@ PM_CheckParamters
 
 ==============
 */
+// orig 0x138ae0
 void PM_CheckParamters()
 {
 	float spd;
@@ -2940,6 +2989,9 @@ void PM_CheckParamters()
 		pmove->maxspeed = V_min(maxspeed, pmove->maxspeed);
 	}
 
+	// halflife-updated's fix, kept: +use on the ground caps maxspeed at a third (HL25, 4f0d502).
+	// The original scales the velocity by 0.3 in PM_PlayerMove on every move, so the slowdown
+	// depends on the frame rate.
 	// Slow down, I'm pulling it! (a box maybe) but only when I'm standing on ground
 	//
 	// JoshA: Moved this to CheckParamters rather than working on the velocity,
@@ -2989,7 +3041,7 @@ void PM_CheckParamters()
 	// Set dead player view_offset
 	if (0 != pmove->dead)
 	{
-		pmove->view_ofs = VEC_DEAD_VIEW;
+		pmove->view_ofs[2] = VEC_DEAD_VIEW[2]; // the original sets only z
 	}
 
 	// Adjust client view angles to match values used on server.
@@ -2999,6 +3051,7 @@ void PM_CheckParamters()
 	}
 }
 
+// orig 0x138d80
 void PM_ReduceTimers()
 {
 	if (pmove->flTimeStepSound > 0)
@@ -3037,6 +3090,7 @@ Numtouch and touchindex[] will be set if any of the physents
 were contacted during the move.
 =============
 */
+// orig 0x138e80
 void PM_PlayerMove(qboolean server)
 {
 	physent_t* pLadder = NULL;
@@ -3073,6 +3127,8 @@ void PM_PlayerMove(qboolean server)
 	{
 		if (PM_CheckStuck())
 		{
+			// halflife-updated's fix, kept: a stuck player may duck free (HL25, 854187a); the
+			// original returns at once.
 			// Let the user try to duck to get unstuck
 			PM_Duck();
 
@@ -3292,6 +3348,7 @@ void PM_PlayerMove(qboolean server)
 	}
 }
 
+// orig 0x1393c0
 void PM_CreateStuckTable()
 {
 	float x, y, z;
@@ -3409,6 +3466,7 @@ invoked by each side as appropriate.  There should be no distinction, internally
 and client.  This will ensure that prediction behaves appropriately.
 */
 
+// orig 0x139780
 void PM_Move(struct playermove_s* ppmove, qboolean server)
 {
 	assert(pm_shared_initialized);
@@ -3426,6 +3484,9 @@ void PM_Move(struct playermove_s* ppmove, qboolean server)
 		pmove->flags &= ~FL_ONGROUND;
 	}
 
+	// halflife-updated's fix, kept: reset in multiplayer too (1d5610c, ValveSoftware/halflife#1542).
+	// The original resets only in singleplayer, so in multiplayer a func_friction's value stays on
+	// the player after leaving it.
 	// Reset friction after each movement so FrictionModifier Triggers work still.
 	if (pmove->movetype == MOVETYPE_WALK)
 	{
@@ -3433,6 +3494,7 @@ void PM_Move(struct playermove_s* ppmove, qboolean server)
 	}
 }
 
+// orig 0x139840
 int PM_GetVisEntInfo(int ent)
 {
 	if (ent >= 0 && ent <= pmove->numvisent)
@@ -3442,6 +3504,7 @@ int PM_GetVisEntInfo(int ent)
 	return -1;
 }
 
+// orig 0x139890
 int PM_GetPhysEntInfo(int ent)
 {
 	if (ent >= 0 && ent <= pmove->numphysent)
@@ -3451,6 +3514,7 @@ int PM_GetPhysEntInfo(int ent)
 	return -1;
 }
 
+// orig 0x1398e0
 void PM_Init(struct playermove_s* ppmove)
 {
 	assert(!pm_shared_initialized);
@@ -3460,6 +3524,7 @@ void PM_Init(struct playermove_s* ppmove)
 	PM_CreateStuckTable();
 	PM_InitTextureTypes();
 
+	// halflife-updated's fix, kept: fill the hull sizes here (c3c5576, ValveSoftware/halflife#3229).
 	//The engine copies the hull sizes initialized by PM_GetHullBounds *before* PM_GetHullBounds is actually called, so manually initialize these.
 	for (int i = 0; i < NUM_HULLS; ++i)
 	{
@@ -3473,6 +3538,7 @@ void PM_Init(struct playermove_s* ppmove)
 	pm_shared_initialized = true;
 }
 
+// Not in the original: halflife-updated's (see the fix comments where it is called)
 bool PM_GetHullBounds(int hullnumber, float* mins, float* maxs)
 {
 	switch (hullnumber)

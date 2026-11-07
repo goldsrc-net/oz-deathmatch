@@ -31,6 +31,7 @@
 #include "weapons.h"
 #include "gamerules.h"
 #include "UserMessages.h"
+#include "game.h"
 
 float UTIL_WeaponTimeBase()
 {
@@ -206,6 +207,12 @@ UTIL_GroupTrace::~UTIL_GroupTrace()
 	g_groupop = m_oldgroupop;
 
 	ENGINE_SETGROUPMASK(g_groupmask, g_groupop);
+}
+
+// orig 0x123a40: SDK 2.x's helper, which halflife-updated's seed dropped; nothing in the original calls it
+void UTIL_GetNextBestWeapon(CBasePlayer* pPlayer, CBasePlayerItem* pCurrentWeapon)
+{
+	g_pGameRules->GetNextBestWeapon(pPlayer, pCurrentWeapon);
 }
 
 TYPEDESCRIPTION gEntvarsDescription[] =
@@ -1182,6 +1189,7 @@ void UTIL_BloodStream(const Vector& origin, const Vector& direction, int color, 
 	MESSAGE_END();
 }
 
+// orig 0x1258c0. Oz: the multiplayer scale is the blood_amount cvar
 void UTIL_BloodDrips(const Vector& origin, const Vector& direction, int color, int amount)
 {
 	if (!UTIL_ShouldShowBlood(color))
@@ -1196,7 +1204,8 @@ void UTIL_BloodDrips(const Vector& origin, const Vector& direction, int color, i
 	if (g_pGameRules->IsMultiplayer())
 	{
 		// scale up blood effect in multiplayer for better visibility
-		amount *= 2;
+		// Oz: blood_amount (default 2) instead of 2, truncated toward zero as the original's fistp
+		amount = (int)(amount * oz_bloodamount.value);
 	}
 
 	if (amount > 255)

@@ -411,19 +411,3 @@ bool CBaseBot::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float
 
 	return fTookDamage;
 }
-
-// TEMP STUB (bots): real one belongs in client.cpp (CBasePlayerByIndex, orig 0x097eb0). Same
-// body as the original's, so the bots run before the merge.
-CBasePlayer* CBasePlayerByIndex(int playerIndex)
-{
-	CBasePlayer* pPlayer = NULL;
-
-	if (playerIndex > 0 && playerIndex <= gpGlobals->maxClients)
-	{
-		edict_t* pPlayerEdict = INDEXENT(playerIndex);
-		if (pPlayerEdict && 0 == pPlayerEdict->free && (pPlayerEdict->v.flags & (FL_CLIENT | FL_FAKECLIENT)) != 0)
-			pPlayer = GetClassPtr((CBasePlayer*)&pPlayerEdict->v);
-	}
-
-	return pPlayer;
-}

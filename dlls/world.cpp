@@ -33,10 +33,14 @@
 #include "weapons.h"
 #include "gamerules.h"
 #include "teamplay_gamerules.h"
+#include "game.h"
 
 CGlobalState gGlobalState;
 
 extern void W_Precache();
+
+// Oz runes - global boolean (globals.cpp in the original)
+extern bool g_runes_exist;
 
 //
 // This must match the list in util.h
@@ -224,8 +228,11 @@ static void InitBodyQue()
 //
 // GLOBALS ASSUMED SET:  g_eoBodyQueueHead
 //
+// orig 0x12cc40
 void CopyToBodyQue(entvars_t* pev)
 {
+	// halflife-updated's fix, kept: a body with no model isn't copied (ac6b664, HL25 corpses; the
+	// commit FIXES.md calls a fix for CBasePlayer::Killed). The original tests EF_NODRAW only.
 	if ((pev->effects & EF_NODRAW) != 0 || pev->modelindex == 0)
 		return;
 
@@ -493,14 +500,21 @@ CWorld::~CWorld()
 	World = nullptr;
 }
 
+// orig 0x12d3a0. The original also caches sv_cheats in g_flWeaponCheat here.
+// halflife-updated's fix, kept: sv_cheats is read on demand through g_psv_cheats (04f8b91,
+// halflife#2511: the cached value went stale until the next map), so there is no g_flWeaponCheat.
 void CWorld::Spawn()
 {
 	g_fGameOver = false;
 	Precache();
 }
 
+// orig 0x12d3f0. Oz: night_ops is cleared and the map's own maps/<map>.cfg is queued before
+// InstallGameRules, whose SERVER_EXECUTE runs it (with game.cfg) before the light styles below read
+// night_ops and light_level; the runes flag is cleared for the new map.
 void CWorld::Precache()
 {
+	// halflife-updated's fix, kept: a second worldspawn removes itself instead of resetting the game.
 	// Flag this entity for removal if it's not the actual world entity.
 	if (World != this)
 	{
@@ -522,6 +536,15 @@ void CWorld::Precache()
 
 	// Set up game rules
 	delete g_pGameRules;
+
+	// Oz: night ops off unless the map's config turns it on
+	CVAR_SET_STRING("night_ops", "0");
+
+	// Oz: per-map config
+	char szCommand[256];
+	UTIL_LogPrintf("Executing %s config file\n", STRING(gpGlobals->mapname));
+	sprintf(szCommand, "exec maps/%s.cfg\n", STRING(gpGlobals->mapname));
+	SERVER_COMMAND(szCommand);
 
 	g_pGameRules = InstallGameRules();
 
@@ -585,54 +608,81 @@ void CWorld::Precache()
 	// Setup light animation tables. 'a' is total darkness, 'z' is maxbright.
 	//
 
-	// 0 normal
-	LIGHT_STYLE(0, "m");
+	// Oz night ops: every style, 63 included, at one level from light_level ("a" for 0 up to "e" for
+	// 4, "f" for anything else)
+	if (oz_nightops.value > 0)
+	{
+		const char* pszLevel;
+		if (oz_lightlevel.value == 0)
+			pszLevel = "a";
+		else if (oz_lightlevel.value == 1)
+			pszLevel = "b";
+		else if (oz_lightlevel.value == 2)
+			pszLevel = "c";
+		else if (oz_lightlevel.value == 3)
+			pszLevel = "d";
+		else if (oz_lightlevel.value == 4)
+			pszLevel = "e";
+		else
+			pszLevel = "f";
 
-	// 1 FLICKER (first variety)
-	LIGHT_STYLE(1, "mmnmmommommnonmmonqnmmo");
+		for (int style = 0; style <= 12; style++)
+			LIGHT_STYLE(style, pszLevel);
+		LIGHT_STYLE(63, pszLevel);
+	}
+	else
+	{
+		// 0 normal
+		LIGHT_STYLE(0, "m");
 
-	// 2 SLOW STRONG PULSE
-	LIGHT_STYLE(2, "abcdefghijklmnopqrstuvwxyzyxwvutsrqponmlkjihgfedcba");
+		// 1 FLICKER (first variety)
+		LIGHT_STYLE(1, "mmnmmommommnonmmonqnmmo");
 
-	// 3 CANDLE (first variety)
-	LIGHT_STYLE(3, "mmmmmaaaaammmmmaaaaaabcdefgabcdefg");
+		// 2 SLOW STRONG PULSE
+		LIGHT_STYLE(2, "abcdefghijklmnopqrstuvwxyzyxwvutsrqponmlkjihgfedcba");
 
-	// 4 FAST STROBE
-	LIGHT_STYLE(4, "mamamamamama");
+		// 3 CANDLE (first variety)
+		LIGHT_STYLE(3, "mmmmmaaaaammmmmaaaaaabcdefgabcdefg");
 
-	// 5 GENTLE PULSE 1
-	LIGHT_STYLE(5, "jklmnopqrstuvwxyzyxwvutsrqponmlkj");
+		// 4 FAST STROBE
+		LIGHT_STYLE(4, "mamamamamama");
 
-	// 6 FLICKER (second variety)
-	LIGHT_STYLE(6, "nmonqnmomnmomomno");
+		// 5 GENTLE PULSE 1
+		LIGHT_STYLE(5, "jklmnopqrstuvwxyzyxwvutsrqponmlkj");
 
-	// 7 CANDLE (second variety)
-	LIGHT_STYLE(7, "mmmaaaabcdefgmmmmaaaammmaamm");
+		// 6 FLICKER (second variety)
+		LIGHT_STYLE(6, "nmonqnmomnmomomno");
 
-	// 8 CANDLE (third variety)
-	LIGHT_STYLE(8, "mmmaaammmaaammmabcdefaaaammmmabcdefmmmaaaa");
+		// 7 CANDLE (second variety)
+		LIGHT_STYLE(7, "mmmaaaabcdefgmmmmaaaammmaamm");
 
-	// 9 SLOW STROBE (fourth variety)
-	LIGHT_STYLE(9, "aaaaaaaazzzzzzzz");
+		// 8 CANDLE (third variety)
+		LIGHT_STYLE(8, "mmmaaammmaaammmabcdefaaaammmmabcdefmmmaaaa");
 
-	// 10 FLUORESCENT FLICKER
-	LIGHT_STYLE(10, "mmamammmmammamamaaamammma");
+		// 9 SLOW STROBE (fourth variety)
+		LIGHT_STYLE(9, "aaaaaaaazzzzzzzz");
 
-	// 11 SLOW PULSE NOT FADE TO BLACK
-	LIGHT_STYLE(11, "abcdefghijklmnopqrrqponmlkjihgfedcba");
+		// 10 FLUORESCENT FLICKER
+		LIGHT_STYLE(10, "mmamammmmammamamaaamammma");
 
-	// 12 UNDERWATER LIGHT MUTATION
-	// this light only distorts the lightmap - no contribution
-	// is made to the brightness of affected surfaces
-	LIGHT_STYLE(12, "mmnnmmnnnmmnn");
+		// 11 SLOW PULSE NOT FADE TO BLACK
+		LIGHT_STYLE(11, "abcdefghijklmnopqrrqponmlkjihgfedcba");
 
-	// styles 32-62 are assigned by the light program for switchable lights
+		// 12 UNDERWATER LIGHT MUTATION
+		// this light only distorts the lightmap - no contribution
+		// is made to the brightness of affected surfaces
+		LIGHT_STYLE(12, "mmnnmmnnnmmnn");
 
-	// 63 testing
-	LIGHT_STYLE(63, "a");
+		// styles 32-62 are assigned by the light program for switchable lights
 
-	for (int i = 0; i < ARRAYSIZE(gDecals); i++)
-		gDecals[i].index = DECAL_INDEX(gDecals[i].name);
+		// 63 testing
+		LIGHT_STYLE(63, "a");
+
+		// Original bug, kept: the decal indices are looked up only on this branch, so a night ops
+		// map keeps the previous map's (all 0 if it is the first map).
+		for (int i = 0; i < ARRAYSIZE(gDecals); i++)
+			gDecals[i].index = DECAL_INDEX(gDecals[i].name);
+	}
 
 	// init the WorldGraph.
 	WorldGraph.InitGraph();
@@ -689,6 +739,10 @@ void CWorld::Precache()
 	{
 		CVAR_SET_FLOAT("mp_defaultteam", 0);
 	}
+
+	// Oz runes - global boolean
+	if (g_runes_exist)
+		g_runes_exist = false;
 }
 
 
@@ -764,3 +818,7 @@ bool CWorld::KeyValue(KeyValueData* pkvd)
 
 	return CBaseEntity::KeyValue(pkvd);
 }
+
+// Oz: DLL_GLOBAL BOOL g_runes_exist, defined in the original's globals.cpp, which this tree doesn't
+// have; world.cpp clears it at a new map.
+bool g_runes_exist;
