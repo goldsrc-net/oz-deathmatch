@@ -2885,12 +2885,3 @@ void CBasePlayer::UpdateRuneInfo()
 
 	pPlayer->m_iRuneHudTime = 0;
 }
-
-// TEMP STUB (rules): real one belongs in player.cpp
-void CBasePlayer::RemoveRune() {}
-// TEMP STUB (rules): real one belongs in player.cpp
-void CBasePlayer::Teleport() {}
-// TEMP STUB (rules): real one belongs in player.cpp
-void CBasePlayer::MOTD(edict_t* client) {}
-// TEMP STUB (rules): real one belongs in player.cpp
-void CBasePlayer::PlayerMessage(edict_t* client) {}

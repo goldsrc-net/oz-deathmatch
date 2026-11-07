@@ -34,7 +34,7 @@
 // Oz: the rune and suit model paths are built here (bss, 256 bytes in the original)
 char szCommand[256];
 
-extern int NumPlayerStarts; // Oz: the info_player_deathmatch count ServerActivate takes (TEMP STUB at the bottom)
+extern int NumPlayerStarts; // Oz: the info_player_deathmatch count ServerActivate takes (client.cpp)
 
 // Oz: a rune lying in the world. Base CItem (hierarchy.tsv); Spawn, Precache and Touch are its
 // only virtuals, so CItem::Spawn's DropToFloor and ItemTouch never run for it.

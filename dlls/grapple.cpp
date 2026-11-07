@@ -366,9 +366,3 @@ void CGrappleBolt::DragPlayer()
 		}
 	}
 }
-
-// TEMP STUB (items): real one belongs in player.cpp, orig 0xfb3f0 (1.7: leave the hang, restore
-// gravity and MOVETYPE_WALK, kill the bolt).
-void CBasePlayer::PlayerReleaseGrapple()
-{
-}
