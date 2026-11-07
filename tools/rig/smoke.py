@@ -39,6 +39,7 @@ def clean(path):
         line = re.sub(r"\b(oz|ozours)\b", "GAME", line)
         line = re.sub(r"(hl_i386|hl)\.so", "GAMEDLL.so", line)
         line = re.sub(r"\d+(\.\d+)?ms", "Nms", line)
+        line = re.sub(r"logs/L\d+\.log", "logs/LOG", line)
         if re.search(r"ELFCLASS32|minidump|^\s*$", line):
             continue
         out.append(line.rstrip("\n"))

@@ -14,15 +14,10 @@ target_compile_definitions(hl PRIVATE
 	VALVE_DLL)
 
 target_sources(hl PRIVATE
-	aflock.cpp
-	agrunt.cpp
 	airtank.cpp
 	animating.cpp
 	animation.cpp
 	apache.cpp
-	barnacle.cpp
-	barney.cpp
-	bigmomma.cpp
 	bloater.cpp
 	bmodels.cpp
 	bot_ai.cpp
@@ -33,7 +28,6 @@ target_sources(hl PRIVATE
 	bot_move.cpp
 	bot_nav.cpp
 	bot_stats.cpp
-	bullsquid.cpp
 	buttons.cpp
 	cbase.cpp
 	client.cpp
@@ -52,29 +46,20 @@ target_sources(hl PRIVATE
 	func_tank.cpp
 	game.cpp
 	gamerules.cpp
-	gargantua.cpp
 	gauss.cpp
 	genericmonster.cpp
 	ggrenade.cpp
-	gman.cpp
 	grapple.cpp
 	handgrenade.cpp
-	hassassin.cpp
-	headcrab.cpp
 	healthkit.cpp
-	hgrunt.cpp
 	hornet.cpp
 	hornetgun.cpp
-	houndeye.cpp
 	h_ai.cpp
 	h_battery.cpp
 	h_cine.cpp
 	h_cycler.cpp
 	h_export.cpp
-	ichthyosaur.cpp
-	islave.cpp
 	items.cpp
-	leech.cpp
 	lights.cpp
 	maprules.cpp
 	monstermaker.cpp
@@ -83,7 +68,6 @@ target_sources(hl PRIVATE
 	mortar.cpp
 	mp5.cpp
 	multiplay_gamerules.cpp
-	nihilanth.cpp
 	nodes.cpp
 	observer.cpp
 	osprey.cpp
@@ -93,12 +77,9 @@ target_sources(hl PRIVATE
 	player.cpp
 	playermonster.cpp
 	python.cpp
-	rat.cpp
-	roach.cpp
 	rpg.cpp
 	satchel.cpp
 	schedule.cpp
-	scientist.cpp
 	scripted.cpp
 	shotgun.cpp
 	singleplay_gamerules.cpp
@@ -124,7 +105,6 @@ target_sources(hl PRIVATE
 	world.cpp
 	glock.cpp
 	xen.cpp
-	zombie.cpp
 
 	../common/mathlib.cpp
 

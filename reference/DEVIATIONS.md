@@ -40,6 +40,15 @@ OZ's 386 in the original's order and runs its `exec` lines (`skill.cfg`, then th
   the original. OZ keeps the turret, sentry, bullet, hornet, charger, battery, healthkit and
   scientist-heal ones.
 
+## Entities
+
+- **The same entity set as the original, plus `func_vehicle` and `func_vehiclecontrols`.** OZ
+  3.02 has none of the SDK's monsters in 20 of its files (aflock, agrunt, barnacle, barney,
+  bigmomma, bullsquid, gargantua, gman, hassassin, headcrab, hgrunt, houndeye, ichthyosaur, islave,
+  leech, nihilanth, rat, roach, scientist, zombie): they are out of `dlls/CMakeLists.txt`, so a map
+  that places one gets the engine's "Can't init" as on the original. The two vehicle entities are
+  halflife-updated's, kept as in mod-rockcrowbar.
+
 ## halflife-updated's calls that were unclear
 
 Steven, 2026-11-07: a halflife-updated change that is neither clearly a fix nor clearly design goes
@@ -56,6 +65,16 @@ to halflife-updated's version (`../mod-rc2/reference/audit/FIXES.md`, mod-ozdm s
 - **Explosions pull out of a wall by 0.6 units** (`dlls/ggrenade.cpp` CGrenade::Explode). The
   original pulls out by (dmg - 24) * 0.6, 57.6 units for a 120-damage rocket, which could put a big
   explosion on the far side of a thin wall.
+- **The zooms set `m_iFOV` alone** (`dlls/glock.cpp`, `python.cpp`, `mp5.cpp`, `crossbow.cpp`,
+  `weapons.cpp` DefaultDeploy; `dlls/client.cpp` UpdateClientData sends it as the client's fov).
+  halflife-updated's 6f8aac9 (halflife #3044). The original keeps `pev->fov` beside it and sends
+  that; its MP5 sniper zoom set only `pev->fov`, and a weapon switch reset only `m_iFOV`.
+- **env_sound's room type is an int** (`dlls/sound.cpp`, halflife-updated's fdc159c), as in both
+  RC projects; the original's member is the float `m_flRoomtype`. Same values in practice.
+- **server.cfg runs once, at startup, from the engine** (`dlls/multiplay_gamerules.cpp`). The
+  original's multiplay rules also exec it at every map change (twice on the first, since the
+  engine runs it too); halflife-updated's seed left that to the engine. A cvar changed by hand
+  during a game is no longer reset at the next map.
 - **`ForceClientDllUpdate` resends the whole HUD state** (`dlls/player.cpp`): hide HUD, FOV, weapon
   bits, room type and ammo, besides SDK 2.3's health and battery.
 
