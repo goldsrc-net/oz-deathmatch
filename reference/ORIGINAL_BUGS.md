@@ -139,6 +139,9 @@ h_battery.cpp CRecharge::Use (0xc5a50)  no floor on the juice: a capacity that i
 ---- player
 player.cpp CBasePlayer::                the booby trap renames the player's classname to      kept
   PlayerDeathThink (0xf2920)            "Booby Trap Rune" until respawn
+client.cpp PlayerPostThink (0x976b0)    the join HUD, rune HUD and spawn protection counters    changed (72 Hz;
+                                        advance once per client command: spawn protection     Steven)
+                                        lasts 1.7 s at 72 fps, 0.6 s at 200
 player.cpp CBasePlayer::PostThink       the regeneration rune ticks every 30 PostThinks (one   changed (time-
   (0xf4f00)                             per client command), so it heals with the client's    based, 30/72 s;
                                         frame rate: 4.8 hp/s at 72 fps, 13 at 200             Steven)

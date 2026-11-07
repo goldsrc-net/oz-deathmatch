@@ -95,6 +95,11 @@ in its own `Fix original bug:` commit.
   PostThinks, one per command the client sends, so the rune healed faster the higher the
   player's frame rate: about 5 health a second at 2004's 72 fps default, 13 at 200. Ours ticks
   every 30/72 s, what a 72 fps client got.
+- **The join HUD and spawn protection count at 72 Hz** (`dlls/client.cpp` PlayerPostThink;
+  Steven, 2026-11-07). The original advances their counters once per command, so spawn protection's
+  120 lasted 1.7 s at 72 fps and 0.6 s at 200, and the version, help, MOTD, rune HUD and
+  default-name messages came sooner the faster the client. Ours steps every counter at 72 Hz of
+  the player's command time (`m_flOzTickTime`); an attack press still ends spawn protection at once.
 
 ## Crashes in the original
 

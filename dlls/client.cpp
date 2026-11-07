@@ -1134,6 +1134,9 @@ void PlayerPreThink(edict_t* pEntity)
 		pPlayer->PreThink();
 }
 
+// OZ's join HUD and spawn protection counters step at 72 Hz, 2004's default fps_max (original bug, fixed).
+static constexpr float OZ_TICK = 1.0f / 72.0f;
+
 /*
 ================
 PlayerPostThink
@@ -1143,7 +1146,7 @@ Called every frame after physics are run
 */
 // orig 0x976b0. OZ: the join-time HUD lines (version, help, oz_line1/oz_line2, MOTD, observer hint),
 // the rune HUD refresh, the default-name message and spawn protection (glow shell and god mode for
-// 120 frames or until the first attack).
+// 120 steps, 1.7 s, or until the first attack).
 void PlayerPostThink(edict_t* pEntity)
 {
 	entvars_t* pev = &pEntity->v;
@@ -1154,196 +1157,213 @@ void PlayerPostThink(edict_t* pEntity)
 	if (!pPlayer)
 		return;
 
-	// Oz messaging
-	if (pPlayer->IsNetClient())
+	// original bug, fixed (Steven 2026-11-07): the original advances these HUD and spawn
+	// protection counters once per PostThink, one per command the client sends, so they ran faster
+	// the higher the client's frame rate (spawn protection's 120 lasted 1.7 s at 2004's 72 fps,
+	// 0.6 s at 200). Ours steps them at 72 Hz of the player's command time.
+	int iOzTicks = 0;
+	pPlayer->m_flOzTickTime += gpGlobals->frametime;
+	while (pPlayer->m_flOzTickTime >= OZ_TICK && iOzTicks < 10)
 	{
-		if (pPlayer->m_iRuneHudTime < 900)
-			pPlayer->m_iRuneHudTime++;
-		else
-			pPlayer->UpdateRuneInfo();
+		pPlayer->m_flOzTickTime -= OZ_TICK;
+		iOzTicks++;
+	}
+	if (pPlayer->m_flOzTickTime >= OZ_TICK) // a long stall: drop the rest
+		pPlayer->m_flOzTickTime = 0;
 
-		if (pPlayer->m_iStart < 26)
-			pPlayer->m_iStart++;
-		if (pPlayer->m_iCommands < 26)
-			pPlayer->m_iCommands++;
-		if (pPlayer->m_iOz < 26)
-			pPlayer->m_iOz++;
-		if (pPlayer->m_iMOTDTimer < 26)
-			pPlayer->m_iMOTDTimer++;
-
-		if (pPlayer->m_iNameCheckTimer < 26 && ++pPlayer->m_iNameCheckTimer == 25)
+	// Oz messaging
+	for (int iTick = 0; iTick < iOzTicks; iTick++)
+	{
+		if (pPlayer->IsNetClient())
 		{
-			// a default name gets PlayerMessage
-			const char* pszName = STRING(pPlayer->pev->netname);
-			const size_t iLen = strlen(pszName);
-			if (iLen == 6)
-			{
-				if (0 == stricmp(pszName, "Player"))
-					pPlayer->PlayerMessage(pPlayer->edict());
-			}
-			else if (iLen == 9 && 0 != isdigit(pszName[1])) // VERIFY: the original tests isdigit on name[1] (0x97847); an odd test, read literally
-			{
-				pPlayer->PlayerMessage(pPlayer->edict());
-			}
-
-			pPlayer->m_iOz = 0;
-			pPlayer->m_iStart = 0;
-			pPlayer->m_iCommands = 0;
-		}
-
-		if (pPlayer->m_iMOTDTimer == 25)
-		{
-			if (pPlayer->IsNetClient())
-				CLIENT_COMMAND(pEntity, "console 1.0\n");
-
-			if (oz_picture.value == 1)
-			{
-				pPlayer->m_iOz = 26;
-				pPlayer->m_iStart = 26;
-				pPlayer->m_iCommands = 26;
-			}
+			if (pPlayer->m_iRuneHudTime < 900)
+				pPlayer->m_iRuneHudTime++;
 			else
+				pPlayer->UpdateRuneInfo();
+
+			if (pPlayer->m_iStart < 26)
+				pPlayer->m_iStart++;
+			if (pPlayer->m_iCommands < 26)
+				pPlayer->m_iCommands++;
+			if (pPlayer->m_iOz < 26)
+				pPlayer->m_iOz++;
+			if (pPlayer->m_iMOTDTimer < 26)
+				pPlayer->m_iMOTDTimer++;
+
+			if (pPlayer->m_iNameCheckTimer < 26 && ++pPlayer->m_iNameCheckTimer == 25)
 			{
+				// a default name gets PlayerMessage
+				const char* pszName = STRING(pPlayer->pev->netname);
+				const size_t iLen = strlen(pszName);
+				if (iLen == 6)
+				{
+					if (0 == stricmp(pszName, "Player"))
+						pPlayer->PlayerMessage(pPlayer->edict());
+				}
+				else if (iLen == 9 && 0 != isdigit(pszName[1])) // VERIFY: the original tests isdigit on name[1] (0x97847); an odd test, read literally
+				{
+					pPlayer->PlayerMessage(pPlayer->edict());
+				}
+
 				pPlayer->m_iOz = 0;
 				pPlayer->m_iStart = 0;
 				pPlayer->m_iCommands = 0;
-				pPlayer->MOTD(pPlayer->edict());
 			}
-		}
 
-		if (pPlayer->m_iCommands == 25)
-		{
-			char szText[201];
-			hudtextparms_t hText;
-
-			sprintf(szText, "Type help in the console for command help\n");
-
-			memset(&hText, 0, sizeof(hText));
-			hText.channel = 4;
-			hText.x = 0.01;
-			hText.y = 0.9;
-			hText.effect = 0;
-			hText.r1 = 0;
-			hText.g1 = 255;
-			hText.b1 = 0;
-			hText.a1 = 255;
-			hText.r2 = 0;
-			hText.g2 = 255;
-			hText.b2 = 0;
-			hText.a2 = 255;
-			hText.fadeinTime = 1;
-			hText.fadeoutTime = 5;
-			hText.holdTime = 45;
-			hText.fxTime = 0.5;
-			UTIL_HudMessage(pPlayer, hText, szText);
-			pPlayer->m_iCommands = 26;
-		}
-
-		if (pPlayer->m_iOz == 25)
-		{
-			if (pPlayer->IsNetClient())
+			if (pPlayer->m_iMOTDTimer == 25)
 			{
-				CLIENT_COMMAND(pEntity, UTIL_VarArgs("cl_forwardspeed %f\n", CVAR_GET_FLOAT("sv_maxspeed")));
-				CLIENT_COMMAND(pEntity, UTIL_VarArgs("cl_backspeed %f\n", CVAR_GET_FLOAT("sv_maxspeed")));
+				if (pPlayer->IsNetClient())
+					CLIENT_COMMAND(pEntity, "console 1.0\n");
+
+				if (oz_picture.value == 1)
+				{
+					pPlayer->m_iOz = 26;
+					pPlayer->m_iStart = 26;
+					pPlayer->m_iCommands = 26;
+				}
+				else
+				{
+					pPlayer->m_iOz = 0;
+					pPlayer->m_iStart = 0;
+					pPlayer->m_iCommands = 0;
+					pPlayer->MOTD(pPlayer->edict());
+				}
 			}
 
-			char szText[201];
-			hudtextparms_t hText;
+			if (pPlayer->m_iCommands == 25)
+			{
+				char szText[201];
+				hudtextparms_t hText;
 
-			// The original sprintf's the server's oz_link (and below, oz_line1 and oz_line2) into 201
-			// bytes; long ones overrun it. Ours cuts the text to fit (reference/DEVIATIONS.md,
-			// Crashes in the original).
-			if (CVAR_GET_FLOAT("mp_teamplay") != 0)
-				snprintf(szText, sizeof(szText), "Oz Teamplay v3.02\n%s\n", CVAR_GET_STRING("oz_link"));
-			else
-				snprintf(szText, sizeof(szText), "Oz Deathmatch v3.02\n%s\n", CVAR_GET_STRING("oz_link"));
+				sprintf(szText, "Type help in the console for command help\n");
 
-			memset(&hText, 0, sizeof(hText));
-			hText.channel = 2;
-			hText.x = 0.5;
-			hText.y = 0.01;
-			hText.effect = 0;
-			hText.r1 = 0;
-			hText.g1 = 255;
-			hText.b1 = 0;
-			hText.a1 = 255;
-			hText.r2 = 0;
-			hText.g2 = 255;
-			hText.b2 = 0;
-			hText.a2 = 255;
-			hText.fadeinTime = 1;
-			hText.fadeoutTime = 5;
-			hText.holdTime = 45;
-			hText.fxTime = 0; // the original leaves it at memset's 0
-			UTIL_HudMessage(pPlayer, hText, szText);
-			pPlayer->m_iOz = 26;
-		}
+				memset(&hText, 0, sizeof(hText));
+				hText.channel = 4;
+				hText.x = 0.01;
+				hText.y = 0.9;
+				hText.effect = 0;
+				hText.r1 = 0;
+				hText.g1 = 255;
+				hText.b1 = 0;
+				hText.a1 = 255;
+				hText.r2 = 0;
+				hText.g2 = 255;
+				hText.b2 = 0;
+				hText.a2 = 255;
+				hText.fadeinTime = 1;
+				hText.fadeoutTime = 5;
+				hText.holdTime = 45;
+				hText.fxTime = 0.5;
+				UTIL_HudMessage(pPlayer, hText, szText);
+				pPlayer->m_iCommands = 26;
+			}
 
-		// the server's own lines, the frame after the help hint
-		if (pPlayer->m_iCommands == 26)
-		{
-			char szText[201];
-			hudtextparms_t hText;
+			if (pPlayer->m_iOz == 25)
+			{
+				if (pPlayer->IsNetClient())
+				{
+					CLIENT_COMMAND(pEntity, UTIL_VarArgs("cl_forwardspeed %f\n", CVAR_GET_FLOAT("sv_maxspeed")));
+					CLIENT_COMMAND(pEntity, UTIL_VarArgs("cl_backspeed %f\n", CVAR_GET_FLOAT("sv_maxspeed")));
+				}
 
-			snprintf(szText, sizeof(szText), "%s\n%s\n", CVAR_GET_STRING("oz_line1"), CVAR_GET_STRING("oz_line2")); // cut to fit, as above
+				char szText[201];
+				hudtextparms_t hText;
 
-			memset(&hText, 0, sizeof(hText));
-			hText.channel = 0;
-			hText.x = 0.01;
-			hText.y = 0.6;
-			hText.effect = 0;
-			hText.r1 = 215;
-			hText.g1 = 150;
-			hText.b1 = 253;
-			hText.a1 = 255;
-			hText.r2 = 215;
-			hText.g2 = 150;
-			hText.b2 = 253;
-			hText.a2 = 255;
-			hText.fadeinTime = 1;
-			hText.fadeoutTime = 5;
-			hText.holdTime = 7;
-			hText.fxTime = 0.5;
-			UTIL_HudMessage(pPlayer, hText, szText);
-			pPlayer->m_iCommands = 27;
-		}
+				// The original sprintf's the server's oz_link (and below, oz_line1 and oz_line2) into 201
+				// bytes; long ones overrun it. Ours cuts the text to fit (reference/DEVIATIONS.md,
+				// Crashes in the original).
+				if (CVAR_GET_FLOAT("mp_teamplay") != 0)
+					snprintf(szText, sizeof(szText), "Oz Teamplay v3.02\n%s\n", CVAR_GET_STRING("oz_link"));
+				else
+					snprintf(szText, sizeof(szText), "Oz Deathmatch v3.02\n%s\n", CVAR_GET_STRING("oz_link"));
 
-		if (pPlayer->m_iStart == 25 && pPlayer->m_iObserver == 1)
-		{
-			char szText[201];
-			hudtextparms_t hText;
+				memset(&hText, 0, sizeof(hText));
+				hText.channel = 2;
+				hText.x = 0.5;
+				hText.y = 0.01;
+				hText.effect = 0;
+				hText.r1 = 0;
+				hText.g1 = 255;
+				hText.b1 = 0;
+				hText.a1 = 255;
+				hText.r2 = 0;
+				hText.g2 = 255;
+				hText.b2 = 0;
+				hText.a2 = 255;
+				hText.fadeinTime = 1;
+				hText.fadeoutTime = 5;
+				hText.holdTime = 45;
+				hText.fxTime = 0; // the original leaves it at memset's 0
+				UTIL_HudMessage(pPlayer, hText, szText);
+				pPlayer->m_iOz = 26;
+			}
 
-			sprintf(szText, "                                    - Observer Mode -\nFire or Use to escape - Jump to change view - Alt Fire changes Players\n");
+			// the server's own lines, the frame after the help hint
+			if (pPlayer->m_iCommands == 26)
+			{
+				char szText[201];
+				hudtextparms_t hText;
 
-			memset(&hText, 0, sizeof(hText));
-			hText.channel = 1;
-			hText.x = 0.3;
-			hText.y = 0.85;
-			hText.effect = 0;
-			hText.r1 = 255;
-			hText.g1 = 0;
-			hText.b1 = 0;
-			hText.a1 = 255;
-			hText.r2 = 255;
-			hText.g2 = 0;
-			hText.b2 = 0;
-			hText.a2 = 255;
-			hText.fadeinTime = 0;
-			hText.fadeoutTime = 0;
-			hText.holdTime = 40;
-			hText.fxTime = 0.5;
-			UTIL_HudMessage(pPlayer, hText, szText);
-			pPlayer->m_iStart = 26;
+				snprintf(szText, sizeof(szText), "%s\n%s\n", CVAR_GET_STRING("oz_line1"), CVAR_GET_STRING("oz_line2")); // cut to fit, as above
+
+				memset(&hText, 0, sizeof(hText));
+				hText.channel = 0;
+				hText.x = 0.01;
+				hText.y = 0.6;
+				hText.effect = 0;
+				hText.r1 = 215;
+				hText.g1 = 150;
+				hText.b1 = 253;
+				hText.a1 = 255;
+				hText.r2 = 215;
+				hText.g2 = 150;
+				hText.b2 = 253;
+				hText.a2 = 255;
+				hText.fadeinTime = 1;
+				hText.fadeoutTime = 5;
+				hText.holdTime = 7;
+				hText.fxTime = 0.5;
+				UTIL_HudMessage(pPlayer, hText, szText);
+				pPlayer->m_iCommands = 27;
+			}
+
+			if (pPlayer->m_iStart == 25 && pPlayer->m_iObserver == 1)
+			{
+				char szText[201];
+				hudtextparms_t hText;
+
+				sprintf(szText, "                                    - Observer Mode -\nFire or Use to escape - Jump to change view - Alt Fire changes Players\n");
+
+				memset(&hText, 0, sizeof(hText));
+				hText.channel = 1;
+				hText.x = 0.3;
+				hText.y = 0.85;
+				hText.effect = 0;
+				hText.r1 = 255;
+				hText.g1 = 0;
+				hText.b1 = 0;
+				hText.a1 = 255;
+				hText.r2 = 255;
+				hText.g2 = 0;
+				hText.b2 = 0;
+				hText.a2 = 255;
+				hText.fadeinTime = 0;
+				hText.fadeoutTime = 0;
+				hText.holdTime = 40;
+				hText.fxTime = 0.5;
+				UTIL_HudMessage(pPlayer, hText, szText);
+				pPlayer->m_iStart = 26;
+			}
 		}
 	}
 
-	// Oz spawn protection
+	// Oz spawn protection: an attack press ends it at once; otherwise it counts at 72 Hz
 	if (pPlayer->m_iSpawnProtect < 120)
 	{
 		if ((pPlayer->m_afButtonPressed & IN_ATTACK) != 0)
 			pPlayer->m_iSpawnProtect = 120;
 		else
-			pPlayer->m_iSpawnProtect++;
+			pPlayer->m_iSpawnProtect = V_min(pPlayer->m_iSpawnProtect + iOzTicks, 120);
 	}
 
 	if (pPlayer->m_iSpawnProtect == 120)
