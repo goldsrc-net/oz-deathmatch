@@ -91,6 +91,7 @@ target_sources(hl PRIVATE
 	plane.cpp
 	plats.cpp
 	player.cpp
+	playermonster.cpp
 	python.cpp
 	rat.cpp
 	roach.cpp
