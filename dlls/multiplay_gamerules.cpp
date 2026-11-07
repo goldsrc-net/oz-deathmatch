@@ -65,9 +65,8 @@ static CMultiplayGameMgrHelper g_GameMgrHelper;
 
 // orig 0xda7a0. The original also runs servercfgfile on a dedicated server ("Executing dedicated server
 // config file"); halflife-updated's seed dropped that because today's engine runs server.cfg itself, and
-// running it twice would re-apply it after the map's own config. Kept: halflife-updated's fix.
-// VERIFY: that the engine's own server.cfg run covers the original's (servercfgfile is not registered here,
-// reference/DEVIATIONS.md).
+// running it twice would re-apply it after the map's own config. Kept: halflife-updated's fix (Steven
+// 2026-11-07: left to the engine; servercfgfile is not registered here, reference/DEVIATIONS.md).
 CHalfLifeMultiplay::CHalfLifeMultiplay()
 {
 	g_VoiceGameMgr.Init(&g_GameMgrHelper, gpGlobals->maxClients);

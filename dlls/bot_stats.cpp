@@ -107,8 +107,7 @@ float CBaseBotStats::FindWeaponDesire(CBasePlayerItem* pItem, float flDistance) 
 	return 0;
 }
 
-// True when pszFile opens. The values come from the cvars, truncated to whole numbers. The
-// colours are copied into 4-byte fields with strcpy (orig: a longer value overruns them).
+// True when pszFile opens. The values come from the cvars, truncated to whole numbers.
 bool CBaseBotStats::ReadBotFile(char* pszFile) // orig 0x08e0b0
 {
 	std::ifstream file(pszFile);
@@ -121,10 +120,13 @@ bool CBaseBotStats::ReadBotFile(char* pszFile) // orig 0x08e0b0
 		char szTopColor[4];
 		char szBottomColor[4];
 
-		strcpy(szName, CVAR_GET_STRING("bot_name"));
-		strcpy(szModel, CVAR_GET_STRING("bot_model"));
-		strcpy(szTopColor, CVAR_GET_STRING("bot_top_color"));
-		strcpy(szBottomColor, CVAR_GET_STRING("bot_bottom_color"));
+		// The original strcpy's the cvars, so a name or model over 63 characters or a colour over 3
+		// overruns these buffers (and the members after). Ours cuts them to fit
+		// (reference/DEVIATIONS.md, Crashes in the original).
+		snprintf(szName, sizeof(szName), "%s", CVAR_GET_STRING("bot_name"));
+		snprintf(szModel, sizeof(szModel), "%s", CVAR_GET_STRING("bot_model"));
+		snprintf(szTopColor, sizeof(szTopColor), "%s", CVAR_GET_STRING("bot_top_color"));
+		snprintf(szBottomColor, sizeof(szBottomColor), "%s", CVAR_GET_STRING("bot_bottom_color"));
 
 		strcpy(m_szName, szName);
 		strcpy(m_szModel, szModel);

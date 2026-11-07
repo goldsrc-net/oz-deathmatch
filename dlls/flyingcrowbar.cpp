@@ -97,8 +97,11 @@ void CFlyingCrowbar::SpinTouch(CBaseEntity* pOther)
 			}
 		}
 
-		// sic: the original stops here, so the thrown crowbar stays, invisible and not solid, its
-		// BubbleThink running every 0.25 s until the map ends (ORIGINAL_BUGS)
+		// The original stops here, so every thrown crowbar stays, invisible and not solid, its
+		// BubbleThink running every 0.25 s, until the server runs out of edicts. Ours removes it as
+		// the path below does (reference/DEVIATIONS.md, Crashes in the original).
+		SetThink(&CFlyingCrowbar::SUB_Remove);
+		pev->nextthink = gpGlobals->time + 0.1;
 		return;
 	}
 

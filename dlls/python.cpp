@@ -131,8 +131,8 @@ void CPython::Holster()
 }
 
 // orig 0xfd2a0. OZ: zoom to oz_zoomamount357 instead of 40. The zoom state is the original's m_fInZoom
-// and pev->fov, which halflife-updated dropped (d4b0e77, 6f8aac9) for a singleplayer save/restore
-// problem that a multiplayer-only mod doesn't have.
+// (dropped by halflife-updated's d4b0e77, kept for OZ's zoom code); halflife-updated's fix, kept (6f8aac9, halflife #3044): the zoom lives in m_iFOV alone, where the original
+// kept pev->fov beside it.
 void CPython::SecondaryAttack()
 {
 #ifdef CLIENT_DLL
@@ -144,17 +144,16 @@ void CPython::SecondaryAttack()
 		return;
 	}
 
-	if (m_pPlayer->pev->fov == oz_zoomamount357.value)
+	if (m_pPlayer->m_iFOV == oz_zoomamount357.value)
 	{
 		m_fInZoom = 0;
 		m_pPlayer->m_iFOV = 0; // 0 means reset to default fov
-		m_pPlayer->pev->fov = 0;
+		m_pPlayer->m_iFOV = 0;
 	}
-	else if (m_pPlayer->pev->fov != oz_zoomamount357.value)
+	else if (m_pPlayer->m_iFOV != oz_zoomamount357.value)
 	{
 		m_fInZoom = 1;
 		m_pPlayer->m_iFOV = (int)oz_zoomamount357.value;
-		m_pPlayer->pev->fov = m_pPlayer->m_iFOV;
 	}
 
 	m_flNextSecondaryAttack = 0.75;
@@ -246,11 +245,11 @@ void CPython::Reload()
 	if (m_pPlayer->ammo_357 <= 0)
 		return;
 
-	if (m_pPlayer->pev->fov != 0)
+	if (m_pPlayer->m_iFOV != 0)
 	{
 		m_fInZoom = 0;
 		m_pPlayer->m_iFOV = 0; // 0 means reset to default fov
-		m_pPlayer->pev->fov = 0;
+		m_pPlayer->m_iFOV = 0;
 	}
 
 	// OZ passes body 0 where the SDK passed the multiplayer scope

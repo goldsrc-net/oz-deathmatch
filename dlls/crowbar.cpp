@@ -237,10 +237,12 @@ bool CCrowbar::Swing(bool fFirst)
 		if (fFirst)
 		{
 			// miss
+			// halflife-updated's fix, kept: GetNextAttackDelay evens out the fire-rate creep (seed; Steven
+			// 2026-11-07: unclear calls go to halflife-updated). The original sets UTIL_WeaponTimeBase() + the cycle.
 			if (m_pPlayer->m_iRune == RUNE_HASTE)
-				m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclecrowbar.value * 0.5;
+				m_flNextPrimaryAttack = GetNextAttackDelay(oz_cyclecrowbar.value * 0.5);
 			else
-				m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclecrowbar.value;
+				m_flNextPrimaryAttack = GetNextAttackDelay(oz_cyclecrowbar.value);
 
 			// player "shoot" animation
 			m_pPlayer->SetAnimation(PLAYER_ATTACK1);
@@ -296,11 +298,13 @@ bool CCrowbar::Swing(bool fFirst)
 #endif
 
 		// halflife-updated's fix, kept: the original set this at the end, after the return for a dead
+		// halflife-updated's fix, kept: GetNextAttackDelay evens out the fire-rate creep (seed; Steven
+		// 2026-11-07: unclear calls go to halflife-updated). The original sets UTIL_WeaponTimeBase() + the cycle.
 		// target, so a corpse took swings with no delay (511c6ef, halflife#2590)
 		if (m_pPlayer->m_iRune == RUNE_HASTE)
-			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclecrowbar2.value * 0.5;
+			m_flNextPrimaryAttack = GetNextAttackDelay(oz_cyclecrowbar2.value * 0.5);
 		else
-			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclecrowbar2.value;
+			m_flNextPrimaryAttack = GetNextAttackDelay(oz_cyclecrowbar2.value);
 
 #ifndef CLIENT_DLL
 		// play thwack, smack, or dong sound

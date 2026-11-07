@@ -154,7 +154,11 @@ Used from elsewhere:
 - ActionChat lines with bot_dontchat 0; mercy (bot_mercy 1) against a low-scoring human.
 - A bot holding only a satchel or tripmine (bug 4).
 
-## 8. Original bugs (all kept)
+## 8. Original bugs
+
+All kept, except the crashes guarded since: 1, 3, 4, 10, 12's SaveNavToFile and 14
+(`reference/ORIGINAL_BUGS.md`).
+
 
 1. ActionChooseGoal (0x083700): an owned "weapon*" entity in the look list makes the loop
    `continue` without stepping to the next entity: infinite loop. Carried weapons have EF_NODRAW

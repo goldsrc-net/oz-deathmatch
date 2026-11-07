@@ -236,7 +236,10 @@ bool UseBotCycle(int iLine) // orig 0x088310
 	std::ifstream file("botcycle.txt");
 	char szLastBotUsed[100];
 	char szLine[100];
-	char szCommand[100];
+	// The original's command buffer is 100 bytes, so a line over 82 characters overruns it in the
+	// sprintf below. Ours fits the longest line getline gives (reference/DEVIATIONS.md, Crashes in
+	// the original).
+	char szCommand[128];
 
 	strcpy(szLastBotUsed, BotGlobals.m_szLastBotUsed); // orig: copied and never used
 
@@ -291,8 +294,10 @@ void BotClientPutInServer(edict_t* pEntity, int fUseBotCycle) // orig 0x0885e0
 	bool fFromFile = false;
 	if (0 != fUseBotCycle)
 	{
-		char szFile[120] = "default.cfg";
-		sprintf(szFile, "%s/bots/%s.cfg", CVAR_GET_STRING("runfolder"), BotGlobals.m_szLastBotUsed);
+		// The original formats into 120 bytes, which a long runfolder with a long bot cycle line
+		// overruns. Ours has room for the path (reference/DEVIATIONS.md, Crashes in the original).
+		char szFile[256] = "default.cfg";
+		snprintf(szFile, sizeof(szFile), "%s/bots/%s.cfg", CVAR_GET_STRING("runfolder"), BotGlobals.m_szLastBotUsed);
 		if (pPlayer->Stats.ReadBotFile(szFile))
 		{
 			strcpy(szName, pPlayer->Stats.m_szName);

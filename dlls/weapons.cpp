@@ -764,7 +764,8 @@ void CBasePlayerWeapon::SendWeaponAnim(int iAnim, int body)
 
 #if defined(CLIENT_WEAPONS)
 	// OZ: always sent to the shooter for the glock, MP5 and shotgun, whose server-side firing Valve's
-	// client doesn't predict. sic: no null check on m_pActiveItem.
+	// client doesn't predict. No null check on m_pActiveItem, as the original: every caller is the
+	// active weapon (ItemPostFrame), or a Deploy/Holster made while m_pActiveItem is set.
 	const int iActiveId = m_pPlayer->m_pActiveItem->m_iId;
 	if (iActiveId != WEAPON_GLOCK && iActiveId != WEAPON_MP5 && iActiveId != WEAPON_SHOTGUN)
 	{
@@ -887,7 +888,8 @@ bool CBasePlayerWeapon::DefaultDeploy(const char* szViewModel, const char* szWea
 	if (!CanDeploy())
 		return false;
 
-	// OZ: drop a zoom left over from another weapon (only the FOV; pev->fov stays)
+	// OZ: drop a zoom left over from another weapon (m_iFOV; the original left pev->fov, which halflife-updated's
+	// 6f8aac9 removed)
 	if (0 != SuperGlockZoom)
 	{
 		m_pPlayer->m_iFOV = 0;
@@ -948,13 +950,11 @@ void CBasePlayerWeapon::Holster()
 	if (0 != SuperGlockZoom)
 	{
 		m_pPlayer->m_iFOV = 0;
-		m_pPlayer->pev->fov = 0;
 		SuperGlockZoom = 0;
 	}
 	if (0 != OzZoom)
 	{
 		m_pPlayer->m_iFOV = 0;
-		m_pPlayer->pev->fov = 0;
 		OzZoom = 0;
 	}
 

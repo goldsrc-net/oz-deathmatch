@@ -131,8 +131,13 @@ void CBaseBot::ActionChooseGoal() // orig 0x083700
 			// (orig). VERIFY: our CWeaponBox layout differs.
 			if ((pEntity->pev->effects & EF_NODRAW) == 0 && CheckVisible(pEntity) && 0 == strncmp("weapon", pszClassname, 6))
 			{
+				// The original continues here without stepping to the next entity, so the loop never
+				// ends; ours steps on (reference/DEVIATIONS.md, Crashes in the original).
 				if (pItem->m_pPlayer)
-					continue; // orig: without stepping to the next one, so this never ends
+				{
+					pEntity = pEntity->m_pLink;
+					continue;
+				}
 				if (g_pGameRules->CanHavePlayerItem(this, pItem))
 					flDesire = 100.0;
 			}
@@ -152,8 +157,13 @@ void CBaseBot::ActionChooseGoal() // orig 0x083700
 			}
 			else if (0 == strncmp("weapon_", pszClassname, 7))
 			{
+				// The original never ends here either, as above (reference/DEVIATIONS.md, Crashes in
+				// the original).
 				if (pItem->m_pPlayer)
-					continue; // orig: never ends, as above
+				{
+					pEntity = pEntity->m_pLink;
+					continue;
+				}
 				if (g_pGameRules->CanHavePlayerItem(this, pItem))
 					flDesire = Stats.FindWeaponDesire(pItem, 8192.0);
 			}
@@ -191,6 +201,7 @@ void CBaseBot::ActionChooseWeapon() // orig 0x083b60
 
 	CBasePlayerItem* pBest = NULL;
 	int iBest = 0;
+	bool fCanSwitch = false;
 
 	for (int i = 0; i < MAX_ITEM_TYPES; i++)
 	{
@@ -207,11 +218,24 @@ void CBaseBot::ActionChooseWeapon() // orig 0x083b60
 				iBest = (int)flScore;
 				pBest = pItem;
 			}
+			if (flDesire > 0 && !fCanSwitch && pItem->CanDeploy())
+				fCanSwitch = true;
 		}
 	}
 
 	if (pBest && pev)
 		SwitchWeapon(pBest);
+
+	// The original dispatches a satchel or tripmine again even when no weapon can ever be chosen,
+	// and UseSatchel/UseTripMine call straight back here: recursion until the stack runs out. Ours
+	// returns when nothing has a desire and can deploy (reference/DEVIATIONS.md, Crashes in the
+	// original).
+	if (!pBest && !fCanSwitch)
+	{
+		const char* pszActive = STRING(m_pActiveItem->pev->classname);
+		if (0 == strcmp(pszActive, "weapon_satchel") || 0 == strcmp(pszActive, "weapon_tripmine"))
+			return;
+	}
 
 	FightStyle.DispatchWeaponUse(m_pActiveItem);
 }
@@ -543,18 +567,21 @@ void CBaseBot::ThinkDead() // orig 0x085180
 	m_fWantToBeInCombat = 1;
 }
 
-// Fight or flee. Reads m_pActiveItem without checking it (orig).
+// Fight or flee.
 void CBaseBot::ThinkMood() // orig 0x0852b0
 {
 	CBasePlayerWeapon* pWeapon = (CBasePlayerWeapon*)m_pActiveItem;
 
-	if (pWeapon->m_fInReload)
+	// The original reads the active item unchecked; a live bot has none after a player_weaponstrip,
+	// with no start weapons, or after its last grenade. Ours skips the two weapon tests then
+	// (reference/DEVIATIONS.md, Crashes in the original).
+	if (pWeapon && pWeapon->m_fInReload)
 	{
 		m_fWantToBeInCombat = 0;
 		return;
 	}
 
-	if (0 == strcmp(STRING(m_pActiveItem->pev->classname), "weapon_crowbar"))
+	if (m_pActiveItem && 0 == strcmp(STRING(m_pActiveItem->pev->classname), "weapon_crowbar"))
 	{
 		m_fWantToBeInCombat = 1;
 		return;

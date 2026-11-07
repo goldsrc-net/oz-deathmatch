@@ -40,6 +40,25 @@ OZ's 386 in the original's order and runs its `exec` lines (`skill.cfg`, then th
   the original. OZ keeps the turret, sentry, bullet, hornet, charger, battery, healthkit and
   scientist-heal ones.
 
+## halflife-updated's calls that were unclear
+
+Steven, 2026-11-07: a halflife-updated change that is neither clearly a fix nor clearly design goes
+to halflife-updated's version (`../mod-rc2/reference/audit/FIXES.md`, mod-ozdm section).
+
+- **Weapon fire rates go through `GetNextAttackDelay`** (`dlls/crowbar.cpp`, `glock.cpp`, `mp5.cpp`,
+  `shotgun.cpp`, `crossbow.cpp`), at OZ's cycle cvars. It evens out the creep between a shot's due
+  time and the frame it fires on, as Valve's predicting client does. The original sets
+  `UTIL_WeaponTimeBase() + cycle` (the mp5 SDK 2.3's accumulating cycle). weapons-b's weapons keep
+  the original's timing (a design call made before the rule).
+- **A gauss beam that hits its own shooter does no hitgroup damage** (`dlls/gauss.cpp`
+  CGauss::Fire). The original keeps the last hitgroup, so a reflected beam could headshot the
+  shooter at `head_damage`.
+- **Explosions pull out of a wall by 0.6 units** (`dlls/ggrenade.cpp` CGrenade::Explode). The
+  original pulls out by (dmg - 24) * 0.6, 57.6 units for a 120-damage rocket, which could put a big
+  explosion on the far side of a thin wall.
+- **`ForceClientDllUpdate` resends the whole HUD state** (`dlls/player.cpp`): hide HUD, FOV, weapon
+  bits, room type and ammo, besides SDK 2.3's health and battery.
+
 ## Crashes in the original
 
 - **Runes on a map without deathmatch starts** (`dlls/items.cpp` SpawnRunes, CRune::Move). The
@@ -48,3 +67,47 @@ OZ's 386 in the original's order and runs its `exec` lines (`skill.cfg`, then th
 - **The grapple bolt doesn't create entities** (`dlls/grapple.cpp` CGrappleBolt::BubbleThink). The
   original looks up its owner every think and never uses it; with no owner, `GetClassPtr(NULL)`
   creates a new entity each time, until the server runs out of edicts. Ours drops the lookup.
+- **A bot's goal search always steps to the next entity** (`dlls/bot_ai.cpp`
+  CBaseBot::ActionChooseGoal). The original `continue`s past an owned "weapon*" entity without
+  stepping, so a weaponbox in view of a bot with nothing in slots 1-3 hangs the server.
+- **A bot holding only a satchel or tripmine stops choosing** (`dlls/bot_ai.cpp`
+  CBaseBot::ActionChooseWeapon). UseSatchel and UseTripMine call ActionChooseWeapon, which in the
+  original dispatches the same weapon again when nothing can be switched to: recursion until the
+  stack runs out. Ours returns there when no carried weapon has a desire and can deploy.
+- **A bot's fight style works without an enemy** (`dlls/bot_fightstyle.cpp` UseCrossbow, UseMP5,
+  UseShotgun). The original reads the enemy's origin unchecked (a bot aiming at a tripmine with no
+  enemy gets there). Ours takes the distance as 0.
+- **A bot with no weapon out has a mood** (`dlls/bot_ai.cpp` CBaseBot::ThinkMood). The original
+  reads the active item unchecked; a live bot has none after a player_weaponstrip, with no start
+  weapons, or after its last grenade. Ours skips the reload and crowbar tests then.
+- **The nav file is written only when it opens** (`dlls/bot_nav.cpp` CGraph::SaveNavToFile). The
+  original formats the path into 50 bytes and writes through an unchecked fopen, so a long map
+  name, or a server with no `<runfolder>/nav` directory, crashes the map change. Ours has a
+  256-byte path and skips the file.
+- **Bot strings fit their buffers** (`dlls/bot_stats.cpp` ReadBotFile, `dlls/bot_misc.cpp`
+  UseBotCycle and BotClientPutInServer). The original strcpy's `bot_name`, `bot_model` and the two
+  colour cvars into 64- and 4-byte buffers, a bot cycle line into a 100-byte exec command, and
+  runfolder plus that line into a 120-byte path. Ours cuts the cvars to fit and gives the command
+  128 bytes and the path 256.
+- **The "bot" cvar and `removebot`'s reply fit their buffers** (`dlls/client.cpp` StartFrame,
+  ClientCommand). The original strcpy's the cvar into an 80-byte static and sprintf's the
+  client's argument into 128 bytes. Ours cuts both to fit.
+- **PlayerPostThink tests the player first** (`dlls/client.cpp`). The original calls through it
+  before its own null check at the end. Ours returns at the top.
+- **The join HUD lines fit their buffer** (`dlls/client.cpp` PlayerPostThink). The original
+  sprintf's `oz_link`, and `oz_line1` with `oz_line2`, into 201 bytes on every join. Ours cuts the
+  text to fit.
+- **A generic-hitgroup hit prints an empty center message** (`dlls/player.cpp`
+  CBasePlayer::TraceAttack). The original leaves the message pointer uninitialized for
+  HITGROUP_GENERIC and any hitgroup above 7.
+- **The booby trap makes one grenade** (`dlls/player.cpp` CBasePlayer::PlayerDeathThink). The
+  original also creates a CGrenade it never uses, one empty edict per blast for the rest of the
+  map. Ours calls the static ShootTimed alone.
+- **Removing an item clears the last item too** (`dlls/player.cpp`
+  CBasePlayer::RemovePlayerItem). The original's `else if` leaves m_pLastItem on a removed item that
+  was both active and last (SwitchWeapon doesn't update it), and `lastinv` then deploys it.
+  Ours has halflife-updated's `if`, as mod-rockcrowbar.
+- **A thrown crowbar under the Super Crowbar Rune is removed** (`dlls/flyingcrowbar.cpp`
+  CFlyingCrowbar::SpinTouch). The original leaves each one invisible and thinking for the rest of
+  the map, and the rune throws without limit. Ours removes it 0.1 s after the hit, as a throw
+  without the rune does.

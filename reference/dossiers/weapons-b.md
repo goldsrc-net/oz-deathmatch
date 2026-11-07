@@ -83,7 +83,7 @@ calls). Functions without a note match the SDK body already here.
 0xc09b0  CGauss::PrimaryAttack                    ok: water_weapons, cycle_gauss, haste
 0xc0b40  CGauss::SecondaryAttack                  ok: gauss_maxchargetime, 90 DMG_BLAST, fade (255,0,20)
 0xc1220  CGauss::StartFire                        ok: damage_gauss(_max), recoil, STOP_SOUND pulsemachine
-0xc14c0  CGauss::Fire                             VERIFY: underwater host flag; MP radius 1.2; self-hit hitgroup kept (unclear)
+0xc14c0  CGauss::Fire                             VERIFY: underwater host flag; MP radius 1.2; HLU self-hit hitgroup clear (Steven)
 0xc1c80  CGauss::WeaponIdle                       ok
 0xc1ef0  ammo_gaussclip                           ok
 ```
@@ -268,7 +268,7 @@ calls). Functions without a note match the SDK body already here.
 ```
 0xc21d0  grenade                                  ok
 0xc21f0  CGrenade::Explode                        ok (Vector, Vector)
-0xc2270  CGrenade::Explode                        VERIFY: (TraceResult*) read from disassembly; SDK pull-out kept (unclear), HLU -1 z kept
+0xc2270  CGrenade::Explode                        ok: (TraceResult*) read from disassembly; HLU 0.6 pull-out (Steven), HLU -1 z kept
 0xc26f0  CGrenade::Smoke                          ok
 0xc2890  CGrenade::Killed                         ok
 0xc28b0  CGrenade::DetonateUse                    ok
@@ -358,7 +358,7 @@ rpg      GetItemInfo ITEM_FLAG_NOAUTOSWITCHTO               design  2353ca4 (HL2
 all      GetNextAttackDelay -> UTIL_WeaponTimeBase() + x    design  seed (as mod-rc2 and mod-rockcrowbar)
 4 guns   AddToPlayer WeapPickup                             design  FIXES.md row 0x2ae70..
 gauss    V_min(m_flStartCharge, time) sanitize               fix     8c5d4ab (HL25)
-gauss    Fire: hitgroup cleared on self-hit                 UNCLEAR 8c5d4ab: original kept, flagged
+gauss    Fire: hitgroup cleared on self-hit                 fix     8c5d4ab (Steven 2026-11-07: unclear goes to HLU)
 gauss    SendStopEvent in water/overcharge                  fix     fd35528 (halflife#3188)
 gauss    stop event FEV_GLOBAL                              fix     52b6a8a (halflife#3233)
 gauss    no ammo burn at 0                                  fix     0e8d3ad (halflife#3343)
@@ -368,13 +368,13 @@ hgun     0.3 s MP recharge, empty-delay additions           design  37ed1d9 (HL2
 hgun     iparam1 FIREMODE_FAST -> 0, ammo_hornets test      design  f347954 (Valve's client reads iparam1; server test on m_rgAmmo)
 hgun     TabulateAmmo after recharge                        fix     f347954 (halflife#556)
 hornet   DieTouch owner guard                               fix     e7fb734 (halflife#1598)
-hgrenade Holster disarms (m_flStartThrow = 0)               fix     70dd419 (halflife#3251); mod-rc2/mod-rockcrowbar left it out
+hgrenade Holster disarms (m_flStartThrow = 0)               fix     70dd419 (halflife#3251), as mod-rockcrowbar; mod-rc2 left it out
 hgrenade m_flReleaseThrow kept after throw                  fix     4bb1f3c (halflife#2495)
 hgrenade 6.5 multiplier, 1000 cap                           design  ae352a6 (HL25)
 ggrenade BounceTouch ResetSequenceInfo, frame 0             fix     2ee36b4, b31de2b (FIXES.md)
 ggrenade ShootTimed ResetSequenceInfo                       fix     2ee36b4 (FIXES.md)
 ggrenade Explode z - 1                                      fix     d6accf1 (halflife#3244), as mod-rockcrowbar
-ggrenade Explode pull-out 0.6 (was (dmg - 24) * 0.6)        UNCLEAR 078e787 (halflife#3244): original kept, flagged
+ggrenade Explode pull-out 0.6 (was (dmg - 24) * 0.6)        fix     078e787 (halflife#3244; Steven 2026-11-07: unclear goes to HLU)
 satchel  MODERN_SATCHEL_CONTROLS                            design  1c202f5 (HL25)
 satchel  live charge limit in AddDuplicate                  design  fd97136 (HL25)
 satchel  Deploy idle 2 s after DefaultDeploy                fix     33385ad
@@ -396,8 +396,6 @@ the 500 throw cap; satchel controls and throw speed; tripmine secondary and colo
 
 - rpg.cpp FollowThink: `GetClassPtr((CBasePlayer*)VARS(pev->owner))` with its result unused (0xfe214);
   1.7 tested `player->ishoming` there. Settle by a closer read of 0xfe1f0-0xfe240 (it is unused there).
-- gauss.cpp Fire: self-hit hitgroup (unclear verdict, Steven).
-- ggrenade.cpp Explode pull-out (unclear verdict, Steven).
 - hornetgun.cpp AddToPlayer: ammo count above 250 max_hornets (needs AddPlayerItem's final flow).
 - satchel.cpp `m_flArmTime` name; SatchelThink's dmgtime + 5 each think (reader unknown).
 - tripmine.cpp `pev->euser1 = owner` (reader in another package?); MakeBeam with tripmode 0
@@ -405,7 +403,7 @@ the 500 throw cap; satchel controls and throw speed; tripmine secondary and colo
 - weapons.h CHgun save table (weapons-a).
 - player.h `Flare` name.
 
-10 VERIFY markers in the package's code (the eight files above plus weapons.h and player.h).
+8 VERIFY markers in the package's code (the eight files above plus weapons.h and player.h).
 
 ## 7. Behavior worth testing
 

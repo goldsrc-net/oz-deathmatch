@@ -250,14 +250,14 @@ void CMP5::PrimaryAttack()
 		// HEV suit - indicate out of ammo condition
 		m_pPlayer->SetSuitUpdate("!HEV_AMO0", false, 0);
 
-	// SDK 2.3's accumulating cycle, with OZ's times (halved by the Haste Rune)
+	// OZ's cycle times (halved by the Haste Rune)
 	float flCycle = 0 != OzZoom ? oz_cyclemp5sniper.value : oz_cyclemp5.value;
 	if (m_pPlayer->m_iRune == RUNE_HASTE)
 		flCycle = flCycle * 0.5;
 
-	m_flNextPrimaryAttack = m_flNextPrimaryAttack + flCycle;
-	if (m_flNextPrimaryAttack < UTIL_WeaponTimeBase())
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + flCycle;
+	// halflife-updated's fix, kept: GetNextAttackDelay for SDK 2.3's accumulating cycle (seed; Steven
+	// 2026-11-07: unclear calls go to halflife-updated). The original adds the cycle to the last time.
+	m_flNextPrimaryAttack = GetNextAttackDelay(flCycle);
 
 	m_pPlayer->pev->punchangle.x -= oz_recoilmp5.value;
 
@@ -275,16 +275,15 @@ void CMP5::SecondaryAttack()
 {
 	if (oz_mp5sniper.value == 1)
 	{
-		if (m_pPlayer->pev->fov != 0)
+		if (m_pPlayer->m_iFOV != 0)
 		{
 			m_pPlayer->m_iFOV = 0;
-			m_pPlayer->pev->fov = 0;
 			OzZoom = 0;
 		}
-		else if (m_pPlayer->pev->fov != oz_zoomamountmp5.value)
+		else if (m_pPlayer->m_iFOV != oz_zoomamountmp5.value)
 		{
-			// sic: only pev->fov, not m_iFOV, so the zoom shows through clientdata's fov alone
-			m_pPlayer->pev->fov = oz_zoomamountmp5.value;
+			// the original set only pev->fov here; m_iFOV is the one FOV now (6f8aac9, a fix)
+			m_pPlayer->m_iFOV = (int)oz_zoomamountmp5.value;
 			OzZoom = 1;
 		}
 
@@ -332,14 +331,16 @@ void CMP5::SecondaryAttack()
 		m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16,
 		gpGlobals->v_forward * oz_speedm203.value);
 
+	// halflife-updated's fix, kept: GetNextAttackDelay evens out the fire-rate creep (seed; Steven
+	// 2026-11-07: unclear calls go to halflife-updated). The original sets UTIL_WeaponTimeBase() + the cycle.
 	if (m_pPlayer->m_iRune == RUNE_HASTE)
 	{
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclem203.value * 0.5;
+		m_flNextPrimaryAttack = GetNextAttackDelay(oz_cyclem203.value * 0.5);
 		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + oz_cyclem203.value * 0.5;
 	}
 	else
 	{
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclem203.value;
+		m_flNextPrimaryAttack = GetNextAttackDelay(oz_cyclem203.value);
 		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + oz_cyclem203.value;
 	}
 

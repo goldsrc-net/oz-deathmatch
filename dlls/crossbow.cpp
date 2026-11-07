@@ -320,8 +320,8 @@ void CCrossbow::Holster()
 		SendWeaponAnim(CROSSBOW_HOLSTER2);
 }
 
-// orig 0xa44b0. The zoom state is the original's m_fInZoom and pev->fov, as CPython::SecondaryAttack
-// explains.
+// orig 0xa44b0. The zoom state is the original's m_fInZoom; halflife-updated's fix, kept (6f8aac9, halflife #3044): the zoom lives in m_iFOV alone, where the original
+// kept pev->fov beside it.
 void CCrossbow::PrimaryAttack()
 {
 
@@ -342,10 +342,12 @@ void CCrossbow::PrimaryAttack()
 // orig 0xa4500. OZ: oz_cyclexbow2 (halved by the Haste Rune), oz_damagexbowsniper.
 void CCrossbow::FireSniperBolt()
 {
+	// halflife-updated's fix, kept: GetNextAttackDelay evens out the fire-rate creep (seed; Steven
+	// 2026-11-07: unclear calls go to halflife-updated). The original sets UTIL_WeaponTimeBase() + the cycle.
 	if (m_pPlayer->m_iRune == RUNE_HASTE)
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclexbow2.value * 0.5;
+		m_flNextPrimaryAttack = GetNextAttackDelay(oz_cyclexbow2.value * 0.5);
 	else
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclexbow2.value;
+		m_flNextPrimaryAttack = GetNextAttackDelay(oz_cyclexbow2.value);
 
 	if (m_iClip == 0)
 	{
@@ -445,10 +447,12 @@ void CCrossbow::FireBolt()
 		// HEV suit - indicate out of ammo condition
 		m_pPlayer->SetSuitUpdate("!HEV_AMO0", false, 0);
 
+	// halflife-updated's fix, kept: GetNextAttackDelay evens out the fire-rate creep (seed; Steven
+	// 2026-11-07: unclear calls go to halflife-updated). The original sets UTIL_WeaponTimeBase() + the cycle.
 	if (m_pPlayer->m_iRune == RUNE_HASTE)
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclexbow.value * 0.5;
+		m_flNextPrimaryAttack = GetNextAttackDelay(oz_cyclexbow.value * 0.5);
 	else
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclexbow.value;
+		m_flNextPrimaryAttack = GetNextAttackDelay(oz_cyclexbow.value);
 
 	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.75;
 
@@ -464,16 +468,15 @@ void CCrossbow::FireBolt()
 // orig 0xa4b20. OZ: zoom to oz_zoomamountxbow instead of 20.
 void CCrossbow::SecondaryAttack()
 {
-	if (m_pPlayer->pev->fov == oz_zoomamountxbow.value)
+	if (m_pPlayer->m_iFOV == oz_zoomamountxbow.value)
 	{
 		m_pPlayer->m_iFOV = 0; // 0 means reset to default fov
-		m_pPlayer->pev->fov = 0;
+		m_pPlayer->m_iFOV = 0;
 		m_fInZoom = 0;
 	}
-	else if (m_pPlayer->pev->fov != oz_zoomamountxbow.value)
+	else if (m_pPlayer->m_iFOV != oz_zoomamountxbow.value)
 	{
 		m_pPlayer->m_iFOV = (int)oz_zoomamountxbow.value;
-		m_pPlayer->pev->fov = m_pPlayer->m_iFOV;
 		m_fInZoom = 1;
 	}
 
@@ -488,7 +491,7 @@ void CCrossbow::Reload()
 	if (m_pPlayer->ammo_bolts <= 0 || (float)m_iClip >= oz_magazinexbow.value)
 		return;
 
-	if (m_pPlayer->pev->fov != 0)
+	if (m_pPlayer->m_iFOV != 0)
 	{
 		SecondaryAttack();
 	}

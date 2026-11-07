@@ -184,7 +184,7 @@ SelectItem, SwitchWeapon m_ForceSendAnimations                           fix    
 UpdateClientData         status bar, Weapons message, empty CurWeapon    design   removed
                          one-health rounding, restore resend, room type  fix      kept (room type: bc3add9, world)
                          Health as a short (5a0c6c1)                     fix      kept per the rules package
-ForceClientDllUpdate     extra resends                                   fix      kept (unclear: flag to Steven)
+ForceClientDllUpdate     extra resends                                   fix      kept (Steven 2026-11-07)
 Spawn                    m_flStartCharge, "bj", room type, chat time     kept
 ```
 Flag for Steven: the original's user messages differ from halflife-updated's (SelAmmo registered,
@@ -201,10 +201,11 @@ OZ methods and members added); observer.cpp emptied. TEMP STUBs at the bottom of
   (empty center text). Runtime check of what 3.02 shows.
 - StartObserver: clears FL_MONSTER and FL_FLY right after setting pev->flags = FL_SPECTATOR (no-ops;
   disassembly confirms the bits).
-- PreThink: hanging on the grapple, on the ground, with no train entity: the original reads
-  pTrain->pev through NULL (1.7 the same). Kept.
+- PreThink: hanging on the grapple with no ground entity: pTrain is the world (Instance maps NULL to
+  it, in SDK 2.3 too), so pTrain->pev is never a NULL read. Settled 2026-11-07.
 - PostThink: the cloak rune ORs kRenderFxGlowShell into renderfx (literal).
-- RemovePlayerItem: `else if` for the last item (binary's reading).
+- RemovePlayerItem: the binary's `else if` for the last item is now `if` (crash guard,
+  `reference/DEVIATIONS.md`).
 - IsBot returns the masked FL_FAKECLIENT bit (player.h).
 - All VERIFY member names above.
 
@@ -221,12 +222,14 @@ OZ methods and members added); observer.cpp emptied. TEMP STUBs at the bottom of
 
 ## 8. Original bugs
 
-- TraceAttack: uninitialized message pointer for an unknown/generic hitgroup (changed to NULL).
+- TraceAttack: uninitialized message pointer for an unknown/generic hitgroup (guarded: NULL).
 - PlayerDeathThink: the booby trap creates a CGrenade entity it never uses (ShootTimed is static):
-  one leaked edict per blast. Kept.
+  one leaked edict per blast. Guarded (the static call alone).
 - PlayerDeathThink: the booby trap renames the player's classname to "Booby Trap Rune" until
   respawn (deliberate for the death notice, odd for anything that tests classname "player"). Kept.
-- PreThink: NULL pTrain read while hanging on the ground (see 6). Kept.
+- PreThink: the NULL pTrain read while hanging can't happen (see 6).
+- RemovePlayerItem: an item both active and last stays m_pLastItem after removal, for lastinv to
+  deploy. Guarded.
 - PostThink: one static `donethis` for all players, so Identify runs on alternate frames shared
   across players. Kept.
 - UpdateClientData: with oz_nightops the flashlight time stays due, so FlashBat is sent every frame

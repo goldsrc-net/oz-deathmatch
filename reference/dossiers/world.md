@@ -133,8 +133,8 @@ orig      file               function                         change            
 0x0b7710  func_break.cpp     CBreakable::Die                  gibs along +g_vecAttackDir (Steven's decision);      ok
                                                               re-break guard and fabs kept, commented
 0x0b5980  flyingmonster.cpp  CFlyingMonster::ChangeYaw        roll step 220 * delta (Steven's decision)            ok
-0x10a250  sound.cpp          CEnvSound::KeyValue, m_SaveData  member back to float m_flRoomtype, FIELD_FLOAT, atof  ok
-0x10a6b0  sound.cpp          CEnvSound::Think                 writes (int)m_flRoomtype to the player; the rest is  ok (fix)
+0x10a250  sound.cpp          CEnvSound::KeyValue, m_SaveData  int m_Roomtype kept (fdc159c, fix; Steven 2026-11-07) ok
+0x10a6b0  sound.cpp          CEnvSound::Think                 writes m_Roomtype to the player; the rest is        ok (fix)
                                                               halflife-updated's (bc3add9), commented
 -         sound.cpp          CAmbientGeneric::m_SaveData      original's order (m_dpv before m_fActive)            ok
 -         plats.cpp          CFuncTrain::m_SaveData           original's order                                     ok
@@ -186,7 +186,7 @@ b9adea9   triggers.cpp             changelevel-to-self error                    
 473e9ea   func_break.cpp           no second Die                                             fix (FIXES)
 e19fe47   func_break, plats        fabs                                                      fix (FIXES)
 484911d   func_break.cpp           CPushable::DamageDecal (no glass decal unless breakable)  new: fix (a wrong decal)
-fdc159c   sound.cpp                env_sound room type int                                   reverted: the original's float
+fdc159c   sound.cpp                env_sound room type int                                   fix, kept (as both RC projects)
 bc3add9   sound.cpp, player.*      room type sent from UpdateClientData, saved, reset on      new: fix (halflife#1144 #2936)
                                    level change
 51a1fc2   sound.cpp                SENTENCEG_Init off by one                                 new: fix
@@ -240,8 +240,8 @@ own and no new virtuals (`vtables.py --new`: none). Saved members: every save ta
 now matches `reference/savefields.tsv` in names, order, counts and global flags (checked by
 `~/stignored/ozdm-world/savecmp.py`), except the bool fields above (FIELD_BOOLEAN for halflife-updated's
 bool members where the original has FIELD_INTEGER) and `CGamePlayerEquip`, which the original doesn't
-save (halflife-updated's c20feca, kept). `CEnvSound::m_flRoomtype` is a float again (orig +0x68, the
-original's name). No unsaved members were added.
+save (halflife-updated's c20feca, kept). `CEnvSound`'s room type (orig +0x68, the
+original's float `m_flRoomtype`) stays halflife-updated's `int m_Roomtype` (fdc159c), as in both RC projects. No unsaved members were added.
 
 ## 5. Cross-file needs
 

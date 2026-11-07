@@ -468,9 +468,13 @@ void CGauss::Fire(Vector vecOrigSrc, Vector vecDir, float flDamage)
 		{
 			ClearMultiDamage();
 
-			// VERIFY (unclear, original kept): halflife-updated clears the hitgroup when the beam
-			// hits the shooter (8c5d4ab, HL25); the original keeps it, so a reflected beam can
-			// headshot its own shooter (head_damage)
+			// halflife-updated's fix, kept: if you hurt yourself clear the headshot bit (8c5d4ab, HL25;
+			// Steven 2026-11-07: unclear calls go to halflife-updated). The original keeps the
+			// hitgroup, so a reflected beam could headshot its own shooter (head_damage).
+			if (m_pPlayer->pev == pEntity->pev)
+			{
+				tr.iHitgroup = 0;
+			}
 
 			pEntity->TraceAttack(m_pPlayer->pev, flDamage, vecDir, &tr, DMG_BULLET);
 			ApplyMultiDamage(m_pPlayer->pev, m_pPlayer->pev);

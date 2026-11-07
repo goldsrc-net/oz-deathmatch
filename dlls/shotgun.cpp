@@ -131,7 +131,9 @@ void CShotgun::PrimaryAttack()
 	if (m_pPlayer->pev->waterlevel == 3 && oz_waterweapons.value == 0)
 	{
 		PlayEmptySound();
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.15;
+		// halflife-updated's fix, kept: GetNextAttackDelay evens out the fire-rate creep (seed; Steven
+		// 2026-11-07: unclear calls go to halflife-updated). The original sets UTIL_WeaponTimeBase() + the cycle.
+		m_flNextPrimaryAttack = GetNextAttackDelay(0.15);
 		return;
 	}
 
@@ -184,14 +186,16 @@ void CShotgun::PrimaryAttack()
 	//if (m_iClip != 0)
 	m_flPumpTime = gpGlobals->time + 0.5;
 
+	// halflife-updated's fix, kept: GetNextAttackDelay evens out the fire-rate creep (seed; Steven
+	// 2026-11-07: unclear calls go to halflife-updated). The original sets UTIL_WeaponTimeBase() + the cycle.
 	if (m_pPlayer->m_iRune == RUNE_HASTE)
 	{
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cycleshotgun.value * 0.5;
+		m_flNextPrimaryAttack = GetNextAttackDelay(oz_cycleshotgun.value * 0.5);
 		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + oz_cycleshotgun.value * 0.5;
 	}
 	else
 	{
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cycleshotgun.value;
+		m_flNextPrimaryAttack = GetNextAttackDelay(oz_cycleshotgun.value);
 		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + oz_cycleshotgun.value;
 	}
 	if (m_iClip != 0)
@@ -211,7 +215,9 @@ void CShotgun::SecondaryAttack()
 	if (m_pPlayer->pev->waterlevel == 3 && oz_waterweapons.value == 0)
 	{
 		PlayEmptySound();
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.15;
+		// halflife-updated's fix, kept: GetNextAttackDelay evens out the fire-rate creep (seed; Steven
+		// 2026-11-07: unclear calls go to halflife-updated). The original sets UTIL_WeaponTimeBase() + the cycle.
+		m_flNextPrimaryAttack = GetNextAttackDelay(0.15);
 		return;
 	}
 
@@ -260,14 +266,16 @@ void CShotgun::SecondaryAttack()
 	//if (m_iClip != 0)
 	m_flPumpTime = gpGlobals->time + 0.95;
 
+	// halflife-updated's fix, kept: GetNextAttackDelay evens out the fire-rate creep (seed; Steven
+	// 2026-11-07: unclear calls go to halflife-updated). The original sets UTIL_WeaponTimeBase() + the cycle.
 	if (m_pPlayer->m_iRune == RUNE_HASTE)
 	{
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cycleshotgun2.value * 0.5;
+		m_flNextPrimaryAttack = GetNextAttackDelay(oz_cycleshotgun2.value * 0.5);
 		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + oz_cycleshotgun2.value * 0.5;
 	}
 	else
 	{
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cycleshotgun2.value;
+		m_flNextPrimaryAttack = GetNextAttackDelay(oz_cycleshotgun2.value);
 		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + oz_cycleshotgun2.value;
 	}
 	if (m_iClip != 0)
@@ -300,7 +308,9 @@ void CShotgun::Reload()
 		m_fInSpecialReload = 1;
 		m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.6;
 		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 0.6;
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.0;
+		// halflife-updated's fix, kept: GetNextAttackDelay evens out the fire-rate creep (seed; Steven
+		// 2026-11-07: unclear calls go to halflife-updated). The original sets UTIL_WeaponTimeBase() + the cycle.
+		m_flNextPrimaryAttack = GetNextAttackDelay(1.0);
 		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 1.0;
 		return;
 	}

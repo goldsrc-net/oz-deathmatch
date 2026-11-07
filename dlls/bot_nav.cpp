@@ -229,14 +229,19 @@ void CGraph::MarkLocationUnfavorable(Vector& vecOrigin) // orig 0x08d7a0
 		m_NavArray[x][y][z]--;
 }
 
-// Writes every cell that isn't 1. fopen isn't checked (orig): without a <runfolder>/nav directory
-// fprintf gets NULL and the server crashes at the map change.
+// Writes every cell that isn't 1.
 void CGraph::SaveNavToFile() // orig 0x08d850
 {
-	char szFile[50] = "default";
+	// The original formats the path into 50 bytes, which a long map name or runfolder overruns,
+	// and doesn't check fopen: without a <runfolder>/nav directory fprintf gets NULL at the map
+	// change. Ours has room for the path and writes nothing without a file
+	// (reference/DEVIATIONS.md, Crashes in the original).
+	char szFile[256] = "default";
 
-	sprintf(szFile, "%s/nav/%s.nav", CVAR_GET_STRING("runfolder"), STRING(gpGlobals->mapname));
+	snprintf(szFile, sizeof(szFile), "%s/nav/%s.nav", CVAR_GET_STRING("runfolder"), STRING(gpGlobals->mapname));
 	FILE* pFile = fopen(szFile, "w");
+	if (!pFile)
+		return;
 
 	char szLine[25] = "error";
 	for (int x = 0; x < 256; x++)

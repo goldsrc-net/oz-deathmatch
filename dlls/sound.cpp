@@ -846,14 +846,14 @@ public:
 	static TYPEDESCRIPTION m_SaveData[];
 
 	float m_flRadius;
-	float m_flRoomtype; // the original's name and type; halflife-updated's fdc159c made it int m_Roomtype
+	int m_Roomtype; // halflife-updated's fix, kept (fdc159c): an int, as mod-rc2 and mod-rockcrowbar; the original's float m_flRoomtype
 };
 
 LINK_ENTITY_TO_CLASS(env_sound, CEnvSound);
 TYPEDESCRIPTION CEnvSound::m_SaveData[] =
 	{
 		DEFINE_FIELD(CEnvSound, m_flRadius, FIELD_FLOAT),
-		DEFINE_FIELD(CEnvSound, m_flRoomtype, FIELD_FLOAT),
+		DEFINE_FIELD(CEnvSound, m_Roomtype, FIELD_INTEGER),
 };
 
 IMPLEMENT_SAVERESTORE(CEnvSound, CBaseEntity);
@@ -869,7 +869,7 @@ bool CEnvSound::KeyValue(KeyValueData* pkvd)
 	}
 	if (FStrEq(pkvd->szKeyName, "roomtype"))
 	{
-		m_flRoomtype = atof(pkvd->szValue);
+		m_Roomtype = atoi(pkvd->szValue);
 		return true;
 	}
 
@@ -967,7 +967,7 @@ void CEnvSound::Think() // orig 0x10a6b0
 			{
 				// new entity is closer to player, so it wins.
 				pPlayer->m_SndLast = this;
-				pPlayer->m_SndRoomtype = (int)m_flRoomtype; // the original wrote (short)m_flRoomtype to the client
+				pPlayer->m_SndRoomtype = m_Roomtype;
 				pPlayer->m_flSndRange = flRange;
 
 				// New room type is sent to player in CBasePlayer::UpdateClientData.

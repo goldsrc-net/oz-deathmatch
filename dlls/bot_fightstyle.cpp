@@ -2,8 +2,8 @@
 //
 // Per-weapon fire timing, aim point and fire mode. Called from CBaseBot::ActionChooseWeapon with
 // the newly chosen weapon. UseCrossbow, UseMP5 and UseShotgun read the enemy without checking it
-// (orig): a bot with no enemy that picks one of them (AimAtEntity on a tripmine leads there)
-// dereferences NULL.
+// in the original: a bot with no enemy that picks one of them (AimAtEntity on a tripmine leads
+// there) dereferences NULL. Ours takes the distance as 0 then (BotEnemyDistance).
 
 #include "extdll.h"
 #include "util.h"
@@ -106,9 +106,18 @@ void CBaseBotFightStyle::SetNextShootTime(float flDelay, float flMinRandom, floa
 		m_flStopShootTime = m_flNextShootTime + 0.1 + pBot->m_flMSec;
 }
 
+// The original reads m_hEnemy unchecked in UseCrossbow, UseMP5 and UseShotgun; with no enemy it
+// dereferences NULL. Ours gives 0 (reference/DEVIATIONS.md, Crashes in the original).
+static float BotEnemyDistance(CBaseBot* pBot)
+{
+	if (pBot->m_hEnemy == NULL)
+		return 0;
+	return (pBot->m_hEnemy->pev->origin - pBot->pev->origin).Length();
+}
+
 void CBaseBotFightStyle::UseCrossbow() // orig 0x087250
 {
-	const float flDist = (m_pBot->m_hEnemy->pev->origin - m_pBot->pev->origin).Length();
+	const float flDist = BotEnemyDistance(m_pBot);
 
 	int iChance;
 	if (flDist > 700.0)
@@ -189,7 +198,7 @@ void CBaseBotFightStyle::UseHornetGun() // orig 0x087510
 
 void CBaseBotFightStyle::UseMP5() // orig 0x087560
 {
-	const float flDist = (m_pBot->m_hEnemy->pev->origin - m_pBot->pev->origin).Length();
+	const float flDist = BotEnemyDistance(m_pBot);
 
 	if (flDist < 200.0)
 	{
@@ -236,7 +245,7 @@ void CBaseBotFightStyle::UseSatchel() // orig 0x087700
 
 void CBaseBotFightStyle::UseShotgun() // orig 0x087730
 {
-	const float flDist = (m_pBot->m_hEnemy->pev->origin - m_pBot->pev->origin).Length();
+	const float flDist = BotEnemyDistance(m_pBot);
 
 	RandomizeSecondaryFire(flDist > 700.0 ? 20 : 90);
 	RandomizeAimAtHead(60);

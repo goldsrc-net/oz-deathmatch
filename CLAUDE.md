@@ -57,4 +57,6 @@ site links (`/media/Data3/Projects/mods/oz/downloads/`).
 - Later (Steven, 2026-11-07): once it runs against the original, a cleanup pass fixes OZ's own
   bugs, one commit each (`Fix original bug: ...`), with anything that changes play put to Steven
   first; the same pass runs in mod-rockcrowbar and mod-rc2. Until then original bugs are kept and
-  listed, except crashes, which are fixed (`reference/DEVIATIONS.md`).
+  listed (`reference/ORIGINAL_BUGS.md`), except crashes, which are guarded (`reference/DEVIATIONS.md`).
+- Steven, 2026-11-07: a halflife-updated change neither clearly a fix nor clearly design goes to
+  halflife-updated's version; design reverts already made stay (`../mod-rc2/reference/audit/FIXES.md`).

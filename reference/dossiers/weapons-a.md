@@ -368,14 +368,12 @@ weapons.cpp -> dlls/weapons.cpp
 - `CFlyingCrowbar::m_hOwner` name (code only). Settles: nothing in the binary names it.
 - `CGlock::m_fInZoom` name. Same.
 - `CBasePlayerWeapon::SendWeaponAnim` dereferences `m_pPlayer->m_pActiveItem` without a null check, as
-  the original does. halflife-updated's paths call SendWeaponAnim from Deploy/Holster with an active
-  item set as far as read, but a runtime test should confirm no path reaches it with none (crash).
-- Unclear halflife-updated call, not decided: **GetNextAttackDelay** (the 2013 SDK's fire-rate creep
-  compensation, m_flPrevPrimaryAttack/m_flLastFireTime). The original has no such function; all its
-  weapons set `UTIL_WeaponTimeBase() + cycle`. My files use the original's form; GetNextAttackDelay and
-  its m_flLastFireTime resets (ItemPostFrame, DefaultDeploy) stay for weapons-b's callers. Whether the
-  server should compensate (it changes the server's fire rate slightly against Valve's predicting
-  client, which compensates) is for Steven; weapons-b has the same question.
+  the original does. Read 2026-11-07: every caller is the active weapon (ItemPostFrame) or a
+  Deploy/Holster made while m_pActiveItem is set, so it can't be reached with none.
+- **GetNextAttackDelay** (the 2013 SDK's fire-rate creep compensation): decided by Steven 2026-11-07,
+  unclear calls go to halflife-updated. The crowbar, glock, mp5, shotgun and crossbow set their next
+  primary attack through it where halflife-updated's do (the python has none upstream); the original
+  sets `UTIL_WeaponTimeBase() + cycle`, and the mp5 SDK 2.3's accumulating cycle.
 
 ## 7. Behavior worth testing
 
@@ -397,7 +395,7 @@ weapons.cpp -> dlls/weapons.cpp
 
 ## 8. Original bugs
 
-All kept.
+All kept, except the Super Crowbar Rune's leaked crowbar, guarded (`reference/ORIGINAL_BUGS.md`).
 
 - flyingcrowbar.cpp SpinTouch: with the Super Crowbar Rune the thrown crowbar is never removed
   (invisible, SOLID_NOT, BubbleThink every 0.25 s forever): an edict leak per throw.
@@ -447,5 +445,5 @@ CBasePlayerWeapon::AddPrimaryAmmo     3d13792       fix      sound test (goes wi
 CBasePlayerWeapon::IsUseable, PlayEmptySound, RetireWeapon, SendWeaponAnim m_ForceSendAnimations,
 CBasePlayerWeapon::AddToPlayer (no extract)          fix      FIXES.md rows, as mod-rc2
 DefaultReload forwards body           a3783be       kept     inert: weapons-a's callers pass 0
-GetNextAttackDelay                    seed          unclear  see VERIFY list
+GetNextAttackDelay                    seed          fix      Steven 2026-11-07: unclear goes to HLU
 ```

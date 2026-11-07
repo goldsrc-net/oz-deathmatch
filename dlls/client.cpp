@@ -679,7 +679,9 @@ void ClientCommand(edict_t* pEntity)
 		if (!pBot)
 		{
 			char msg[128] = "kick Some Bot\n";
-			sprintf(msg, "could not kick \"%s\"\n", CMD_ARGV(1));
+			// The original sprintf's the client's argument into 128 bytes; a long one overruns it.
+			// Ours cuts it to fit (reference/DEVIATIONS.md, Crashes in the original).
+			snprintf(msg, sizeof(msg), "could not kick \"%s\"\n", CMD_ARGV(1));
 			CLIENT_PRINTF(pEntity, print_console, msg);
 			return;
 		}
@@ -1147,7 +1149,12 @@ void PlayerPostThink(edict_t* pEntity)
 	entvars_t* pev = &pEntity->v;
 	CBasePlayer* pPlayer = (CBasePlayer*)GET_PRIVATE(pEntity);
 
-	// Oz messaging (the original calls through pPlayer unchecked here)
+	// The original calls through pPlayer here and in the spawn protection below, before its own
+	// null check at the end. Ours returns first (reference/DEVIATIONS.md, Crashes in the original).
+	if (!pPlayer)
+		return;
+
+	// Oz messaging
 	if (pPlayer->IsNetClient())
 	{
 		if (pPlayer->m_iRuneHudTime < 900)
@@ -1243,10 +1250,13 @@ void PlayerPostThink(edict_t* pEntity)
 			char szText[201];
 			hudtextparms_t hText;
 
+			// The original sprintf's the server's oz_link (and below, oz_line1 and oz_line2) into 201
+			// bytes; long ones overrun it. Ours cuts the text to fit (reference/DEVIATIONS.md,
+			// Crashes in the original).
 			if (CVAR_GET_FLOAT("mp_teamplay") != 0)
-				sprintf(szText, "Oz Teamplay v3.02\n%s\n", CVAR_GET_STRING("oz_link"));
+				snprintf(szText, sizeof(szText), "Oz Teamplay v3.02\n%s\n", CVAR_GET_STRING("oz_link"));
 			else
-				sprintf(szText, "Oz Deathmatch v3.02\n%s\n", CVAR_GET_STRING("oz_link"));
+				snprintf(szText, sizeof(szText), "Oz Deathmatch v3.02\n%s\n", CVAR_GET_STRING("oz_link"));
 
 			memset(&hText, 0, sizeof(hText));
 			hText.channel = 2;
@@ -1275,7 +1285,7 @@ void PlayerPostThink(edict_t* pEntity)
 			char szText[201];
 			hudtextparms_t hText;
 
-			sprintf(szText, "%s\n%s\n", CVAR_GET_STRING("oz_line1"), CVAR_GET_STRING("oz_line2"));
+			snprintf(szText, sizeof(szText), "%s\n%s\n", CVAR_GET_STRING("oz_line1"), CVAR_GET_STRING("oz_line2")); // cut to fit, as above
 
 			memset(&hText, 0, sizeof(hText));
 			hText.channel = 0;
@@ -1564,7 +1574,9 @@ void StartFrame()
 				char* cmd;
 				char* arg1 = NULL;
 
-				strcpy(cmd_line, cvar_bot); // unchecked, as the original (see the dossier)
+				// The original strcpy's the cvar into this 80-byte static, so a longer "bot" value
+				// overruns it. Ours cuts it to fit (reference/DEVIATIONS.md, Crashes in the original).
+				snprintf(cmd_line, sizeof(cmd_line), "%s", cvar_bot);
 				index = 0;
 				cmd = cmd_line;
 
@@ -2648,7 +2660,6 @@ void UpdateClientData(const edict_t* ent, int sendweapons, struct clientdata_s* 
 
 	strcpy(cd->physinfo, ENGINE_GETPHYSINFO(ent));
 
-	cd->fov = pev->fov; // the original's (orig 0x9a370): OZ's zooms set pev->fov; halflife-updated's m_iFOV (6f8aac9) is a singleplayer save fix, design here
 	cd->fov = pl->m_iFOV;
 	cd->weaponanim = pev->weaponanim;
 

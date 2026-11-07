@@ -319,8 +319,9 @@ void CBasePlayer::TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vec
 {
 	if (0 != pev->takedamage)
 	{
-		// VERIFY: the original leaves this uninitialized for HITGROUP_GENERIC (and any hitgroup
-		// above 7) and prints whatever the stack held; NULL prints an empty center message
+		// The original leaves this uninitialized for HITGROUP_GENERIC (and any hitgroup above 7) and
+		// prints through whatever the stack held. Ours starts it NULL, an empty center message
+		// (reference/DEVIATIONS.md, Crashes in the original). VERIFY what 3.02 shows.
 		const char* pszHit = nullptr;
 
 		m_LastHitGroup = ptr->iHitgroup;
@@ -881,7 +882,7 @@ void CBasePlayer::RemoveAllItems(bool removeSuit)
  * ENTITY_METHOD(PlayerDie)
  */
 
-// orig 0xf1af0. Oz: the flashlight goes off first; pev->fov is zeroed, as in the original.
+// orig 0xf1af0. Oz: the flashlight goes off first. The FOV reset is m_iFOV alone (6f8aac9, a fix).
 // The Health message stays halflife-updated's short (fix; LinkUserMessages registers 2 bytes). halflife-updated's multiplayer non-solid corpse (HL25 backport
 // df5605d) is out (design); its respawn count reset stays (fix, as mod-rc2).
 void CBasePlayer::Killed(entvars_t* pevAttacker, int iGib)
@@ -941,7 +942,6 @@ void CBasePlayer::Killed(entvars_t* pevAttacker, int iGib)
 
 	// reset FOV
 	m_iFOV = m_iClientFOV = 0;
-	pev->fov = 0;
 
 	MESSAGE_BEGIN(MSG_ONE, gmsgSetFOV, NULL, pev);
 	WRITE_BYTE(0);
@@ -1383,15 +1383,15 @@ void CBasePlayer::PlayerDeathThink()
 	// Oz Runes - booby trap
 	if (m_iRune == RUNE_TRAP && 0 == wassuicide) // Booby Trap Rune
 	{
-		// the new grenade entity is never used (ShootTimed is static and makes its own): an
-		// empty edict is left behind every time (original bug)
-		CGrenade* pGrenade = GetClassPtr((CGrenade*)NULL);
+		// The original first creates a grenade entity it never uses (ShootTimed is static and
+		// makes its own), so every blast left an empty edict until the server ran out. Ours calls
+		// ShootTimed alone (reference/DEVIATIONS.md, Crashes in the original).
 		pev->classname = MAKE_STRING("Booby Trap Rune");
 		pev->movetype = MOVETYPE_NONE;
 		pev->solid = SOLID_NOT;
 		pev->dmg = 999;
 		pev->nextthink = 0;
-		pGrenade->ShootTimed(plr->pev, Center(), plr->pev->angles, 0);
+		CGrenade::ShootTimed(plr->pev, Center(), plr->pev->angles, 0);
 	}
 
 	if (m_iRune != 0)
@@ -1522,7 +1522,6 @@ void CBasePlayer::StartObserver(Vector vecPosition, Vector vecViewAngle)
 
 		// reset FOV
 		m_iFOV = m_iClientFOV = 0;
-		pev->fov = 0;
 		MESSAGE_BEGIN(MSG_ONE, gmsgSetFOV, NULL, pev);
 		WRITE_BYTE(0);
 		MESSAGE_END();
@@ -2110,8 +2109,8 @@ void CBasePlayer::PreThink()
 				return;
 			}
 		}
-		// VERIFY: hanging on the ground with no train under him, the original reads pTrain->pev
-		// through NULL here (1.7's code too); kept
+		// Hanging with no ground entity, pTrain here is the world (Instance maps NULL to it, in the
+		// SDK 2.3 the original built on too), so pTrain->pev is never a NULL read
 		else if (!FBitSet(pev->flags, FL_ONGROUND) || FBitSet(pTrain->pev->spawnflags, SF_TRACKTRAIN_NOCONTROL) || ((pev->button & (IN_MOVELEFT | IN_MOVERIGHT)) != 0 && pTrain->Classify() != CLASS_VEHICLE))
 		{
 			// Turn off the train if you jump, strafe, or the train controls go dead
@@ -3217,7 +3216,6 @@ void CBasePlayer::Spawn()
 	g_engfuncs.pfnSetPhysicsKeyValue(edict(), "bj", UTIL_dtos1(sv_allowbunnyhopping.value != 0 ? 1 : 0));
 
 	m_iFOV = 0;		   // init field of view.
-	pev->fov = 0;
 	m_iClientFOV = -1; // make sure fov reset is sent
 	m_ClientSndRoomtype = -1;
 
@@ -4258,7 +4256,11 @@ bool CBasePlayer::RemovePlayerItem(CBasePlayerItem* pItem)
 		pev->viewmodel = 0;
 		pev->weaponmodel = 0;
 	}
-	else if (m_pLastItem == pItem) // VERIFY: the original's else (an item both active and last stays last)
+	// The original has `else if` here: SwitchWeapon leaves m_pLastItem alone, so an item can be both
+	// active and last, and removing it left m_pLastItem pointing at the removed item for lastinv to
+	// deploy. Ours clears it either way, as halflife-updated and mod-rockcrowbar do
+	// (reference/DEVIATIONS.md, Crashes in the original).
+	if (m_pLastItem == pItem)
 		m_pLastItem = NULL;
 
 	CBasePlayerItem* pPrev = m_rgpPlayerItems[pItem->iItemSlot()];

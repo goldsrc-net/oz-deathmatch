@@ -60,13 +60,12 @@ void CGrenade::Explode(TraceResult* pTrace, int bitsDamageType)
 	pev->takedamage = DAMAGE_NO;
 
 	// Pull out of the wall a bit
-	// VERIFY (unclear, original kept): halflife-updated pulls out by 0.6 units (078e787,
-	// halflife#3244) so a big explosion can't sit on the far side of a thin wall; the original
-	// pulls out by (dmg - 24) * 0.6 (57.6 units for a 120 damage rocket), which also moves the
-	// centre of every explosion's radius damage
+	// halflife-updated's fix, kept: pull out by 0.6 units (078e787, halflife#3244; Steven 2026-11-07:
+	// unclear calls go to halflife-updated), so a big explosion can't sit on the far side of a thin
+	// wall. The original pulls out by (dmg - 24) * 0.6 (57.6 units for a 120 damage rocket).
 	if (pTrace->flFraction != 1.0)
 	{
-		pev->origin = pTrace->vecEndPos + (pTrace->vecPlaneNormal * (pev->dmg - 24) * 0.6);
+		pev->origin = pTrace->vecEndPos + (pTrace->vecPlaneNormal * 0.6);
 	}
 
 	int iContents = UTIL_PointContents(pev->origin);

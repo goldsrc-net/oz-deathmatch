@@ -112,16 +112,14 @@ void CGlock::Holster()
 // orig 0x130760. OZ: zoom in to oz_zoomamountglock and back.
 void CGlock::SecondaryAttack()
 {
-	if (m_pPlayer->pev->fov == oz_zoomamountglock.value)
+	if (m_pPlayer->m_iFOV == oz_zoomamountglock.value)
 	{
 		m_pPlayer->m_iFOV = 0;
-		m_pPlayer->pev->fov = 0;
 		m_fInZoom = 0;
 	}
-	else if (m_pPlayer->pev->fov != oz_zoomamountglock.value)
+	else if (m_pPlayer->m_iFOV != oz_zoomamountglock.value)
 	{
 		m_pPlayer->m_iFOV = (int)oz_zoomamountglock.value;
-		m_pPlayer->pev->fov = m_pPlayer->m_iFOV;
 		m_fInZoom = 1;
 	}
 
@@ -138,7 +136,9 @@ void CGlock::PrimaryAttack()
 		if (m_fFireOnEmpty)
 		{
 			PlayEmptySound();
-			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.2;
+			// halflife-updated's fix, kept: GetNextAttackDelay evens out the fire-rate creep (seed; Steven
+			// 2026-11-07: unclear calls go to halflife-updated). The original sets UTIL_WeaponTimeBase() + the cycle.
+			m_flNextPrimaryAttack = GetNextAttackDelay(0.2);
 		}
 
 		return;
@@ -225,28 +225,30 @@ void CGlock::PrimaryAttack()
 		// HEV suit - indicate out of ammo condition
 		m_pPlayer->SetSuitUpdate("!HEV_AMO0", false, 0);
 
+	// halflife-updated's fix, kept: GetNextAttackDelay evens out the fire-rate creep (seed; Steven
+	// 2026-11-07: unclear calls go to halflife-updated). The original sets UTIL_WeaponTimeBase() + the cycle.
 	if (m_fInZoom == 1)
 	{
 		if (m_pPlayer->m_iRune == RUNE_HASTE)
 		{
-			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cycleglock2.value * 0.5;
+			m_flNextPrimaryAttack = GetNextAttackDelay(oz_cycleglock2.value * 0.5);
 		}
 		else if (m_pPlayer->m_iRune == RUNE_SUPERGLOCK)
 		{
-			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclesglock.value;
+			m_flNextPrimaryAttack = GetNextAttackDelay(oz_cyclesglock.value);
 			m_pPlayer->pev->punchangle.x -= 15;
 		}
 		else
 		{
-			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cycleglock2.value;
+			m_flNextPrimaryAttack = GetNextAttackDelay(oz_cycleglock2.value);
 		}
 	}
 	else
 	{
 		if (m_pPlayer->m_iRune == RUNE_HASTE)
-			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cycleglock.value * 0.5;
+			m_flNextPrimaryAttack = GetNextAttackDelay(oz_cycleglock.value * 0.5);
 		else
-			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cycleglock.value;
+			m_flNextPrimaryAttack = GetNextAttackDelay(oz_cycleglock.value);
 	}
 
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat(m_pPlayer->random_seed, 10, 15);

@@ -193,7 +193,7 @@ Kept as fixes:
 - GetHullBounds fills the bounds (c3c5576).
 - ServerActivate's loop bounds.
 - UpdateClientData: the fov from m_iFOV (6f8aac9 removed pev->fov), and this repo's m_WeaponBits sync.
-- The multiplay constructor doesn't exec servercfgfile (VERIFY).
+- The multiplay constructor doesn't exec servercfgfile (Steven 2026-11-07: left to the engine).
 - Health message 2 bytes (5a0c6c1, halflife#2149).
 - In the forks' files: CWorld's duplicate-worldspawn guard; CopyToBodyQue's modelindex 0 test (ac6b664,
   flagged below); vban's sscanf check (3e9a8f0); pm_shared's FlyMove first-plane reflect, duck-unstick,
@@ -219,23 +219,21 @@ Kept, not decided here: the busters branch and sv_busters (DEVIATIONS); the "bj"
 equals the original; plats/vehicle_ignition.wav, for this build's func_vehicle.
 
 Flagged for Steven:
-- pm_shared: mod-rc2's p6 restored the original FlyMove reflect, duck-unstick and +use move; this package
-  kept them as fixes (FIXES.md lists none of them). Today's HL25 client predicts halflife-updated's version.
-- CopyToBodyQue's modelindex test: kept here as a fix (FIXES.md's verdict for the same commit), while
-  mod-rockcrowbar dropped it.
+- pm_shared's FlyMove reflect, duck-unstick and +use move, and CopyToBodyQue's modelindex test: kept as
+  fixes. Steven 2026-11-07: halflife-updated's in all three projects (mod-rc2 and mod-rockcrowbar are
+  being brought in line).
 - allow_spectators is still registered (DEVIATIONS) but nothing reads it now that spectate is gone.
 - StatusText/StatusValue stay registered because player.cpp's status bar sends them. The original
   registers neither; if the player package drops the status bar, they can go.
 
-## 7. VERIFY list (10)
+## 7. VERIFY list (9)
 
 Code (2):
 - PlayerPostThink's default-name test reads isdigit(name[1]) for a 9-character name (0x97847). Literal.
 - CHalfLifeTeamplay::InitHUD calls TeamWithFewestPlayers and drops the result (0x1147bc). Literal;
   harmless, since Spawn sets the team.
 
-Decision (1):
-- The multiplay constructor: that the engine's own server.cfg covers the original's servercfgfile exec.
+Decision (0): the multiplay constructor's servercfgfile exec is left to the engine (Steven 2026-11-07).
 
 Names in player.h (7): m_iStart (role), m_iMOTDTimer, m_iNameCheckTimer, m_iObserver, m_iSpawnProtect,
 m_iBotFovCheck, m_iWallhackCheck. The player package settles the names.
@@ -265,12 +263,12 @@ m_iBotFovCheck, m_iWallhackCheck. The player package settles the names.
 
 ## 9. Original bugs
 
-All kept:
+All kept, except the crashes guarded since (`reference/ORIGINAL_BUGS.md`):
 - **ClientDisconnect frees a bot's private data, then GetClassPtr builds a blank CBasePlayer** for it.
   The bot's hook and rune cleanup see zeroed members, so a disconnecting bot's rune is not respawned and
   its hook is not killed.
 - **CHalfLifeMultiplay::IPointsForKill dereferences pAttacker unchecked.** That is NULL when the killer is
-  a player whose Classify isn't CLASS_PLAYER.
+  a player whose Classify isn't CLASS_PLAYER, which no player is, so it can't crash.
 - **StartFrame's "bot" cvar handling:**
   - addbot past 31 players returns before the cvar is cleared, so it repeats every second;
   - strcpy into an 80-byte static with no length check.
