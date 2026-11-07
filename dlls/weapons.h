@@ -375,6 +375,12 @@ public:
 	// hle time creep vars
 	float m_flPrevPrimaryAttack;
 	float m_flLastFireTime;
+
+	// weapons-a: OZ's zoom flags, between m_fInReload and m_iDefaultAmmo in the original (orig +0xc0,
+	// +0xc4; names from the 1.7 source). DefaultDeploy and Holster reset both; the MP5 sniper uses
+	// OzZoom. Only those resets touch SuperGlockZoom in 3.02.
+	int SuperGlockZoom;
+	int OzZoom;
 };
 
 
@@ -508,8 +514,8 @@ public:
 
 	void PrimaryAttack() override;
 	void SecondaryAttack() override;
-	void GlockFire(float flSpread, float flCycleTime, bool fUseAutoAim);
 	bool Deploy() override;
+	void Holster() override;
 	void Reload() override;
 	void WeaponIdle() override;
 
@@ -523,11 +529,8 @@ public:
 	}
 
 private:
-	int m_iShell;
-
-
-	unsigned short m_usFireGlock1;
-	unsigned short m_usFireGlock2;
+	int m_fInZoom; // orig +0xcc. VERIFY name: the glock's own zoom flag (the 1.7 source used the base's OzZoom)
+	int m_iShell;  // orig +0xd0
 };
 
 enum crowbar_e
@@ -554,6 +557,7 @@ public:
 	bool GetItemInfo(ItemInfo* p) override;
 
 	void PrimaryAttack() override;
+	void SecondaryAttack() override; // OZ: throws a flying_crowbar
 	bool Swing(bool fFirst);
 	bool Deploy() override;
 	void Holster() override;
@@ -592,12 +596,15 @@ public:
 	void Precache() override;
 	int iItemSlot() override { return 2; }
 	bool GetItemInfo(ItemInfo* p) override;
+	void AddToPlayer(CBasePlayer* pPlayer) override;
 	void PrimaryAttack() override;
 	void SecondaryAttack() override;
 	bool Deploy() override;
 	void Holster() override;
 	void Reload() override;
 	void WeaponIdle() override;
+	float m_flSoundDelay; // orig +0xcc
+	int m_fInZoom;		  // orig +0xd0
 
 	bool UseDecrement() override
 	{
@@ -631,14 +638,17 @@ public:
 	void Precache() override;
 	int iItemSlot() override { return 3; }
 	bool GetItemInfo(ItemInfo* p) override;
+	void AddToPlayer(CBasePlayer* pPlayer) override;
+	int SecondaryAmmoIndex() override;
 
 	void PrimaryAttack() override;
 	void SecondaryAttack() override;
 	bool Deploy() override;
+	void Holster() override;
 	void Reload() override;
 	void WeaponIdle() override;
-	float m_flNextAnimTime;
-	int m_iShell;
+	float m_flNextAnimTime; // orig +0xcc
+	int m_iShell;			// orig +0xd0
 
 	bool UseDecrement() override
 	{
@@ -678,6 +688,7 @@ public:
 	int iItemSlot() override { return 3; }
 	bool GetItemInfo(ItemInfo* p) override;
 
+	void AddToPlayer(CBasePlayer* pPlayer) override;
 	void FireBolt();
 	void FireSniperBolt();
 	void PrimaryAttack() override;
@@ -686,6 +697,7 @@ public:
 	void Holster() override;
 	void Reload() override;
 	void WeaponIdle() override;
+	int m_fInZoom; // orig +0xcc
 
 	bool UseDecrement() override
 	{
@@ -729,6 +741,7 @@ public:
 	void Precache() override;
 	int iItemSlot() override { return 3; }
 	bool GetItemInfo(ItemInfo* p) override;
+	void AddToPlayer(CBasePlayer* pPlayer) override;
 
 	void PrimaryAttack() override;
 	void SecondaryAttack() override;
@@ -1025,13 +1038,6 @@ enum hgun_e
 class CHgun : public CBasePlayerWeapon
 {
 public:
-#ifndef CLIENT_DLL
-	// VERIFY: the original's CHgun has no save table (no CHgun::Save in funcfile.tsv); this one and
-	// its table in weapons.cpp (weapons-a's file) are halflife-updated's
-	bool Save(CSave& save) override;
-	bool Restore(CRestore& restore) override;
-	static TYPEDESCRIPTION m_SaveData[];
-#endif
 
 	void Spawn() override;
 	void Precache() override;

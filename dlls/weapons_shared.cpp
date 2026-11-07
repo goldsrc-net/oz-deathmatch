@@ -20,6 +20,7 @@
 #include "gamerules.h"
 
 // Precaches the ammo and queues the ammo info for sending to clients
+// orig 0x128f70
 void AddAmmoNameToAmmoRegistry(const char* szAmmoname, const char* weaponName)
 {
 	// make sure it's not already in the registry
@@ -45,6 +46,7 @@ void AddAmmoNameToAmmoRegistry(const char* szAmmoname, const char* weaponName)
 	ammoType.WeaponName = weaponName;
 }
 
+// orig 0x12a820
 bool CBasePlayerWeapon::CanDeploy()
 {
 	bool bHasAmmo = false;
@@ -75,6 +77,7 @@ bool CBasePlayerWeapon::CanDeploy()
 	return true;
 }
 
+// orig 0x12aa40
 bool CBasePlayerWeapon::DefaultReload(int iClipSize, int iAnim, float fDelay, int body)
 {
 	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -88,6 +91,7 @@ bool CBasePlayerWeapon::DefaultReload(int iClipSize, int iAnim, float fDelay, in
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + fDelay;
 
 	//!!UNDONE -- reload sound goes here !!!
+	// The original ignored body (SDK 2.3 sent 0); weapons-a's callers all pass 0
 	SendWeaponAnim(iAnim, body);
 
 	m_fInReload = true;
@@ -96,11 +100,13 @@ bool CBasePlayerWeapon::DefaultReload(int iClipSize, int iAnim, float fDelay, in
 	return true;
 }
 
+// orig 0x12ab90
 void CBasePlayerWeapon::ResetEmptySound()
 {
 	m_iPlayEmptySound = true;
 }
 
+// orig 0x129bc0
 bool CanAttack(float attack_time, float curtime, bool isPredicted)
 {
 #if defined(CLIENT_WEAPONS)
@@ -117,6 +123,7 @@ bool CanAttack(float attack_time, float curtime, bool isPredicted)
 	}
 }
 
+// orig 0x129c00
 void CBasePlayerWeapon::ItemPostFrame()
 {
 	if ((m_fInReload) && (m_pPlayer->m_flNextAttack <= UTIL_WeaponTimeBase()))
@@ -133,6 +140,7 @@ void CBasePlayerWeapon::ItemPostFrame()
 		m_fInReload = false;
 	}
 
+	// GetNextAttackDelay's bookkeeping (the 2013 SDK's, not in the original); see the dossier
 	if ((m_pPlayer->pev->button & IN_ATTACK) == 0)
 	{
 		m_flLastFireTime = 0.0f;

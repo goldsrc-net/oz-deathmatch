@@ -2648,7 +2648,7 @@ void UpdateClientData(const edict_t* ent, int sendweapons, struct clientdata_s* 
 
 	strcpy(cd->physinfo, ENGINE_GETPHYSINFO(ent));
 
-	cd->maxspeed = pev->maxspeed;
+	cd->fov = pev->fov; // the original's (orig 0x9a370): OZ's zooms set pev->fov; halflife-updated's m_iFOV (6f8aac9) is a singleplayer save fix, design here
 	cd->fov = pl->m_iFOV;
 	cd->weaponanim = pev->weaponanim;
 

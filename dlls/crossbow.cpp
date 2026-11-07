@@ -21,10 +21,11 @@
 #include "player.h"
 #include "gamerules.h"
 #include "UserMessages.h"
+#include "game.h"
+#include "items.h"
 
 #ifndef CLIENT_DLL
-#define BOLT_AIR_VELOCITY 2000
-#define BOLT_WATER_VELOCITY 1000
+// OZ: the bolt's speeds are oz_speedxbowair and oz_speedxbowwater
 
 // UNDONE: Save/restore this?  Don't forget to set classname and LINK_ENTITY_TO_CLASS()
 //
@@ -45,18 +46,20 @@ class CCrossbowBolt : public CBaseEntity
 public:
 	static CCrossbowBolt* BoltCreate();
 };
-LINK_ENTITY_TO_CLASS(crossbow_bolt, CCrossbowBolt);
+LINK_ENTITY_TO_CLASS(crossbow_bolt, CCrossbowBolt); // orig 0xa36c0
 
+// orig 0xa36e0
 CCrossbowBolt* CCrossbowBolt::BoltCreate()
 {
 	// Create a new entity with CCrossbowBolt private data
 	CCrossbowBolt* pBolt = GetClassPtr((CCrossbowBolt*)NULL);
-	pBolt->pev->classname = MAKE_STRING("bolt");
+	pBolt->pev->classname = MAKE_STRING("crossbow"); // OZ: "bolt" in the SDK; death notices show the inflictor's name
 	pBolt->Spawn();
 
 	return pBolt;
 }
 
+// orig 0xa3730
 void CCrossbowBolt::Spawn()
 {
 	Precache();
@@ -76,6 +79,7 @@ void CCrossbowBolt::Spawn()
 }
 
 
+// orig 0xa3830
 void CCrossbowBolt::Precache()
 {
 	PRECACHE_MODEL("models/crossbow_bolt.mdl");
@@ -88,11 +92,13 @@ void CCrossbowBolt::Precache()
 }
 
 
+// orig 0xa38d0
 int CCrossbowBolt::Classify()
 {
 	return CLASS_NONE;
 }
 
+// orig 0xa38e0. OZ: oz_damagexbow for players and monsters alike.
 void CCrossbowBolt::BoltTouch(CBaseEntity* pOther)
 {
 	SetTouch(NULL);
@@ -110,11 +116,11 @@ void CCrossbowBolt::BoltTouch(CBaseEntity* pOther)
 
 		if (pOther->IsPlayer())
 		{
-			pOther->TraceAttack(pevOwner, gSkillData.plrDmgCrossbowClient, pev->velocity.Normalize(), &tr, DMG_NEVERGIB);
+			pOther->TraceAttack(pevOwner, oz_damagexbow.value, pev->velocity.Normalize(), &tr, DMG_NEVERGIB);
 		}
 		else
 		{
-			pOther->TraceAttack(pevOwner, gSkillData.plrDmgCrossbowMonster, pev->velocity.Normalize(), &tr, DMG_BULLET | DMG_NEVERGIB);
+			pOther->TraceAttack(pevOwner, oz_damagexbow.value, pev->velocity.Normalize(), &tr, DMG_BULLET | DMG_NEVERGIB);
 		}
 
 		ApplyMultiDamage(pev, pevOwner);
@@ -138,7 +144,8 @@ void CCrossbowBolt::BoltTouch(CBaseEntity* pOther)
 	}
 	else
 	{
-		EMIT_SOUND_DYN(ENT(pev), CHAN_BODY, "weapons/xbow_hit1.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0, 7));
+		const int iPitch = 98 + RANDOM_LONG(0, 7); // the original draws the pitch first
+		EMIT_SOUND_DYN(ENT(pev), CHAN_BODY, "weapons/xbow_hit1.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, iPitch);
 
 		SetThink(&CCrossbowBolt::SUB_Remove);
 		pev->nextthink = gpGlobals->time; // this will get changed below if the bolt is allowed to stick in what it hit.
@@ -170,6 +177,7 @@ void CCrossbowBolt::BoltTouch(CBaseEntity* pOther)
 	}
 }
 
+// orig 0xa3e70
 void CCrossbowBolt::BubbleThink()
 {
 	pev->nextthink = gpGlobals->time + 0.1;
@@ -180,12 +188,13 @@ void CCrossbowBolt::BubbleThink()
 	UTIL_BubbleTrail(pev->origin - pev->velocity * 0.1, pev->origin, 1);
 }
 
+// orig 0xa3f20
 void CCrossbowBolt::ExplodeThink()
 {
 	int iContents = UTIL_PointContents(pev->origin);
 	int iScale;
 
-	pev->dmg = 40;
+	pev->dmg = oz_damagexbowexplode.value;
 	iScale = 10;
 
 	MESSAGE_BEGIN(MSG_PVS, SVC_TEMPENTITY, pev->origin);
@@ -221,19 +230,37 @@ void CCrossbowBolt::ExplodeThink()
 }
 #endif
 
-LINK_ENTITY_TO_CLASS(weapon_crossbow, CCrossbow);
+LINK_ENTITY_TO_CLASS(weapon_crossbow, CCrossbow); // orig 0xa40d0
 
+// orig 0xa40f0
 void CCrossbow::Spawn()
 {
+	if (oz_disablexbow.value > 0)
+	{
+		Kill();
+		return;
+	}
+
 	Precache();
 	m_iId = WEAPON_CROSSBOW;
 	SET_MODEL(ENT(pev), "models/w_crossbow.mdl");
 
-	m_iDefaultAmmo = CROSSBOW_DEFAULT_GIVE;
+	m_iDefaultAmmo = (int)oz_givewithxbow.value;
 
 	FallInit(); // get ready to fall down.
 }
 
+// orig 0xa4190. SDK 2.3's WeapPickup, kept here as CPython::AddToPlayer explains.
+void CCrossbow::AddToPlayer(CBasePlayer* pPlayer)
+{
+	CBasePlayerWeapon::AddToPlayer(pPlayer);
+
+	MESSAGE_BEGIN(MSG_ONE, gmsgWeapPickup, NULL, pPlayer->pev);
+	WRITE_BYTE(m_iId);
+	MESSAGE_END();
+}
+
+// orig 0xa4220
 void CCrossbow::Precache()
 {
 	PRECACHE_MODEL("models/w_crossbow.mdl");
@@ -250,23 +277,25 @@ void CCrossbow::Precache()
 }
 
 
+// orig 0xa42e0
 bool CCrossbow::GetItemInfo(ItemInfo* p)
 {
 	p->pszName = STRING(pev->classname);
 	p->pszAmmo1 = "bolts";
-	p->iMaxAmmo1 = BOLT_MAX_CARRY;
+	p->iMaxAmmo1 = (int)oz_maxxbowbolts.value;
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
-	p->iMaxClip = CROSSBOW_MAX_CLIP;
+	p->iMaxClip = (int)oz_magazinexbow.value;
 	p->iSlot = 2;
 	p->iPosition = 2;
 	p->iId = WEAPON_CROSSBOW;
 	p->iFlags = 0;
-	p->iWeight = CROSSBOW_WEIGHT;
+	p->iWeight = (int)oz_weightxbow.value;
 	return true;
 }
 
 
+// orig 0xa43c0
 bool CCrossbow::Deploy()
 {
 	if (0 != m_iClip)
@@ -274,11 +303,12 @@ bool CCrossbow::Deploy()
 	return DefaultDeploy("models/v_crossbow.mdl", "models/p_crossbow.mdl", CROSSBOW_DRAW2, "bow");
 }
 
+// orig 0xa4420
 void CCrossbow::Holster()
 {
 	m_fInReload = false; // cancel any reload in progress.
 
-	if (m_pPlayer->m_iFOV != 0)
+	if (0 != m_fInZoom)
 	{
 		SecondaryAttack();
 	}
@@ -290,13 +320,15 @@ void CCrossbow::Holster()
 		SendWeaponAnim(CROSSBOW_HOLSTER2);
 }
 
+// orig 0xa44b0. The zoom state is the original's m_fInZoom and pev->fov, as CPython::SecondaryAttack
+// explains.
 void CCrossbow::PrimaryAttack()
 {
 
 #ifdef CLIENT_DLL
-	if (m_pPlayer->m_iFOV != 0 && bIsMultiplayer())
+	if (0 != m_fInZoom && bIsMultiplayer())
 #else
-	if (m_pPlayer->m_iFOV != 0 && g_pGameRules->IsMultiplayer())
+	if (0 != m_fInZoom && g_pGameRules->IsMultiplayer())
 #endif
 	{
 		FireSniperBolt();
@@ -307,9 +339,13 @@ void CCrossbow::PrimaryAttack()
 }
 
 // this function only gets called in multiplayer
+// orig 0xa4500. OZ: oz_cyclexbow2 (halved by the Haste Rune), oz_damagexbowsniper.
 void CCrossbow::FireSniperBolt()
 {
-	m_flNextPrimaryAttack = GetNextAttackDelay(0.75);
+	if (m_pPlayer->m_iRune == RUNE_HASTE)
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclexbow2.value * 0.5;
+	else
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclexbow2.value;
 
 	if (m_iClip == 0)
 	{
@@ -329,7 +365,8 @@ void CCrossbow::FireSniperBolt()
 	flags = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL(flags, m_pPlayer->edict(), m_usCrossbow2, 0.0, g_vecZero, g_vecZero, 0, 0, m_iClip, 0, 0, 0);
+	// SDK 2.3's second int is the reserve, which halflife-updated zeroed (Valve's client ignores it)
+	PLAYBACK_EVENT_FULL(flags, m_pPlayer->edict(), m_usCrossbow2, 0.0, g_vecZero, g_vecZero, 0, 0, m_iClip, m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType], 0, 0);
 
 	// player "shoot" animation
 	m_pPlayer->SetAnimation(PLAYER_ATTACK1);
@@ -345,12 +382,13 @@ void CCrossbow::FireSniperBolt()
 	if (0 != tr.pHit->v.takedamage)
 	{
 		ClearMultiDamage();
-		CBaseEntity::Instance(tr.pHit)->TraceAttack(m_pPlayer->pev, 120, vecDir, &tr, DMG_BULLET | DMG_NEVERGIB);
+		CBaseEntity::Instance(tr.pHit)->TraceAttack(m_pPlayer->pev, oz_damagexbowsniper.value, vecDir, &tr, DMG_BULLET | DMG_NEVERGIB);
 		ApplyMultiDamage(pev, m_pPlayer->pev);
 	}
 #endif
 }
 
+// orig 0xa47c0. OZ: bolt speeds, cycle and kick from cvars.
 void CCrossbow::FireBolt()
 {
 	TraceResult tr;
@@ -372,7 +410,7 @@ void CCrossbow::FireBolt()
 	flags = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL(flags, m_pPlayer->edict(), m_usCrossbow, 0.0, g_vecZero, g_vecZero, 0, 0, m_iClip, 0, 0, 0);
+	PLAYBACK_EVENT_FULL(flags, m_pPlayer->edict(), m_usCrossbow, 0.0, g_vecZero, g_vecZero, 0, 0, m_iClip, m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType], 0, 0);
 
 	// player "shoot" animation
 	m_pPlayer->SetAnimation(PLAYER_ATTACK1);
@@ -392,13 +430,13 @@ void CCrossbow::FireBolt()
 
 	if (m_pPlayer->pev->waterlevel == 3)
 	{
-		pBolt->pev->velocity = vecDir * BOLT_WATER_VELOCITY;
-		pBolt->pev->speed = BOLT_WATER_VELOCITY;
+		pBolt->pev->velocity = vecDir * oz_speedxbowwater.value;
+		pBolt->pev->speed = oz_speedxbowwater.value;
 	}
 	else
 	{
-		pBolt->pev->velocity = vecDir * BOLT_AIR_VELOCITY;
-		pBolt->pev->speed = BOLT_AIR_VELOCITY;
+		pBolt->pev->velocity = vecDir * oz_speedxbowair.value;
+		pBolt->pev->speed = oz_speedxbowair.value;
 	}
 	pBolt->pev->avelocity.z = 10;
 #endif
@@ -407,7 +445,10 @@ void CCrossbow::FireBolt()
 		// HEV suit - indicate out of ammo condition
 		m_pPlayer->SetSuitUpdate("!HEV_AMO0", false, 0);
 
-	m_flNextPrimaryAttack = GetNextAttackDelay(0.75);
+	if (m_pPlayer->m_iRune == RUNE_HASTE)
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclexbow.value * 0.5;
+	else
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclexbow.value;
 
 	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.75;
 
@@ -415,18 +456,25 @@ void CCrossbow::FireBolt()
 		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 5.0;
 	else
 		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 0.75;
+
+	m_pPlayer->pev->punchangle.x -= oz_recoilxbow.value;
 }
 
 
+// orig 0xa4b20. OZ: zoom to oz_zoomamountxbow instead of 20.
 void CCrossbow::SecondaryAttack()
 {
-	if (m_pPlayer->m_iFOV != 0)
+	if (m_pPlayer->pev->fov == oz_zoomamountxbow.value)
 	{
 		m_pPlayer->m_iFOV = 0; // 0 means reset to default fov
+		m_pPlayer->pev->fov = 0;
+		m_fInZoom = 0;
 	}
-	else if (m_pPlayer->m_iFOV != 20)
+	else if (m_pPlayer->pev->fov != oz_zoomamountxbow.value)
 	{
-		m_pPlayer->m_iFOV = 20;
+		m_pPlayer->m_iFOV = (int)oz_zoomamountxbow.value;
+		m_pPlayer->pev->fov = m_pPlayer->m_iFOV;
+		m_fInZoom = 1;
 	}
 
 	pev->nextthink = UTIL_WeaponTimeBase() + 0.1;
@@ -434,23 +482,29 @@ void CCrossbow::SecondaryAttack()
 }
 
 
+// orig 0xa4c20. OZ: oz_magazinexbow bolts, oz_reloadxbow seconds (halved by the Haste Rune).
 void CCrossbow::Reload()
 {
-	if (m_pPlayer->ammo_bolts <= 0)
+	if (m_pPlayer->ammo_bolts <= 0 || (float)m_iClip >= oz_magazinexbow.value)
 		return;
 
-	if (m_pPlayer->m_iFOV != 0)
+	if (m_pPlayer->pev->fov != 0)
 	{
 		SecondaryAttack();
 	}
 
-	if (DefaultReload(5, CROSSBOW_RELOAD, 4.5))
-	{
-		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/xbow_reload1.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 93 + RANDOM_LONG(0, 0xF));
-	}
+	float flDelay = oz_reloadxbow.value;
+	if (m_pPlayer->m_iRune == RUNE_HASTE)
+		flDelay = oz_reloadxbow.value * 0.5;
+
+	// sic: the reload sound plays whether or not DefaultReload started one
+	DefaultReload((int)oz_magazinexbow.value, CROSSBOW_RELOAD, flDelay, 0);
+	const int iPitch = 93 + RANDOM_LONG(0, 0xF);
+	EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/xbow_reload1.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, iPitch);
 }
 
 
+// orig 0xa4d50
 void CCrossbow::WeaponIdle()
 {
 	m_pPlayer->GetAutoaimVector(AUTOAIM_2DEGREES); // get the autoaim vector but ignore it;  used for autoaim crosshair in DM
@@ -492,20 +546,23 @@ void CCrossbow::WeaponIdle()
 
 class CCrossbowAmmo : public CBasePlayerAmmo
 {
+	// orig 0x13ab40
 	void Spawn() override
 	{
 		Precache();
 		SET_MODEL(ENT(pev), "models/w_crossbow_clip.mdl");
 		CBasePlayerAmmo::Spawn();
 	}
+	// orig 0x13ab00
 	void Precache() override
 	{
 		PRECACHE_MODEL("models/w_crossbow_clip.mdl");
 		PRECACHE_SOUND("items/9mmclip1.wav");
 	}
+	// orig 0x13aa40
 	bool AddAmmo(CBaseEntity* pOther) override
 	{
-		if (pOther->GiveAmmo(AMMO_CROSSBOWCLIP_GIVE, "bolts", BOLT_MAX_CARRY) != -1)
+		if (pOther->GiveAmmo((int)oz_givexbowbolts.value, "bolts", (int)oz_maxxbowbolts.value) != -1)
 		{
 			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
 			return true;
@@ -513,4 +570,4 @@ class CCrossbowAmmo : public CBasePlayerAmmo
 		return false;
 	}
 };
-LINK_ENTITY_TO_CLASS(ammo_crossbow, CCrossbowAmmo);
+LINK_ENTITY_TO_CLASS(ammo_crossbow, CCrossbowAmmo); // orig 0xa4e90
