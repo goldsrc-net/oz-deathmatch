@@ -122,8 +122,8 @@ orig      file               function                         change            
                                                               m_AllowItemDropping field removed
 0x0d31f0  monsters.cpp       CBaseMonster::SetActivity        oldActivity = m_Activity (Steven's decision)         ok
 0x0d5870  monsters.cpp       CBaseMonster::ChangeYaw          kept halflife-updated's time base, commented          ok (fix)
-0x0d4fa0  monsters.cpp       CBaseMonster::IRelationship      HUMANPASSIVE row back to the original's (fears       VERIFY (unclear)
-                                                              AMIL and APRED; 75bf517 makes them HT/DL)
+0x0d4fa0  monsters.cpp       CBaseMonster::IRelationship      HUMANPASSIVE row: halflife-updated's HT/DL for AMIL  ok (fix, Steven)
+                                                              and APRED kept (75bf517), commented
 0x119910  triggers.cpp       PlayCDTrack                      INDEXENT(1) and "cd pause" (Steven's decision)       ok
 0x119c80  triggers.cpp       CTargetCDAudio::Think            INDEXENT(1) (design, as FIXES.md)                    ok
 0x11aed0  triggers.cpp       CChangeLevel::Spawn              the "points to the current map" error removed        ok (design)
@@ -161,7 +161,8 @@ commit    file(s)                  what                                         
 de70fad   nodes.cpp                DropDelay center print commented out (seed)               design (FIXES), restored
 de70fad   triggers.cpp             CLadder/CTriggerPush KeyValue pass-throughs dropped       new: restored (no behavior)
 b624a61   monsters.cpp             allow_item_dropping keyvalue + save field                 new: design (feature), removed
-75bf517   monsters.cpp             HUMANPASSIVE vs AMIL/APRED: FR -> HT/DL                   new: unclear, original kept
+75bf517   monsters.cpp             HUMANPASSIVE vs AMIL/APRED: FR -> HT/DL                   new: fix (Steven), kept; R_FR is
+                                                                                            never picked as an enemy
 ec1f016   monsters.cpp             SetActivity order                                         decided (oldActivity = m_Activity)
 343bbb2,  monsters.cpp,            yaw/roll from the time since the last turn                fix (FIXES); roll as decided
 95fdebe   flyingmonster.cpp
@@ -265,11 +266,10 @@ original's name). No unsaved members were added.
 
 ## 6. VERIFY list
 
-1. `CBaseMonster::IRelationship` (monsters.cpp, orig 0x0d4fa0): HUMANPASSIVE's row. The original
-   (read from `iEnemy.1301` at 0x163ba0) has HUMANPASSIVE fear ALIENMILITARY and ALIENPREDATOR;
-   halflife-updated's 75bf517 changes them to hate/dislike "so scientists flee them". OZ has no
-   scientists (CScientist isn't in the original), so it only affects any HUMANPASSIVE monster a map
-   spawns. Kept the original's as an unclear call; Steven to decide.
+None open. `CBaseMonster::IRelationship`'s HUMANPASSIVE row, listed here first, was decided by
+Steven 2026-11-07: halflife-updated's 75bf517 is a fix. The original's R_FR (from `iEnemy.1301` at
+0x163ba0) is never picked by `BestVisibleEnemy`, which takes only relationships above R_NO, so
+human-passive monsters ignored alien grunts and bullsquids instead of fleeing them.
 
 ## 7. Behavior worth testing
 

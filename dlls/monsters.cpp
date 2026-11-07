@@ -2199,9 +2199,10 @@ int CBaseMonster::IRelationship(CBaseEntity* pTarget)
 			/*NONE*/ {R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO},
 			/*MACHINE*/ {R_NO, R_NO, R_DL, R_DL, R_NO, R_DL, R_DL, R_DL, R_DL, R_DL, R_NO, R_DL, R_DL, R_DL},
 			/*PLAYER*/ {R_NO, R_DL, R_NO, R_NO, R_DL, R_DL, R_DL, R_DL, R_DL, R_DL, R_NO, R_NO, R_DL, R_DL},
-			// VERIFY (unclear, kept the original's): halflife-updated's 75bf517 makes HUMANPASSIVE hate
-			// ALIENMILITARY and dislike ALIENPREDATOR so scientists flee them; the original fears both.
-			/*HUMANPASSIVE*/ {R_NO, R_NO, R_AL, R_AL, R_HT, R_FR, R_NO, R_HT, R_DL, R_FR, R_NO, R_AL, R_NO, R_NO},
+			// halflife-updated's fix, kept (75bf517): the original's R_FR for ALIENMILITARY and
+			// ALIENPREDATOR does nothing (BestVisibleEnemy only takes relationships above R_NO), and the
+			// fear behavior is coded for R_HT and R_DL, so a scientist ignored alien grunts and bullsquids.
+			/*HUMANPASSIVE*/ {R_NO, R_NO, R_AL, R_AL, R_HT, R_HT, R_NO, R_HT, R_DL, R_DL, R_NO, R_AL, R_NO, R_NO},
 			/*HUMANMILITAR*/ {R_NO, R_NO, R_HT, R_DL, R_NO, R_HT, R_DL, R_DL, R_DL, R_DL, R_NO, R_HT, R_NO, R_NO},
 			/*ALIENMILITAR*/ {R_NO, R_DL, R_HT, R_DL, R_HT, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_DL, R_NO, R_NO},
 			/*ALIENPASSIVE*/ {R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO},
