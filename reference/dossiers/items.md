@@ -199,7 +199,8 @@ override refactors).
 
 ## 8. Original bugs
 
-All kept.
+All kept, except the two crashes the coordinator guarded at the merge (`reference/DEVIATIONS.md`,
+Crashes in the original): the runes without deathmatch starts, and BubbleThink's stray entities.
 
 - `CanHaveRune` case 10 has no break: with the booby trap rune off, it is still allowed whenever
   the super glock rune is on (items.cpp).

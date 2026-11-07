@@ -278,11 +278,9 @@ void CGrappleBolt::BubbleThink()
 {
 	pev->nextthink = gpGlobals->time + 0.1;
 
-	// Oz: 1.7's CTF trail colors used this; 3.02 dropped them but kept the lookup, which
-	// creates an entity when the bolt has no owner (GetClassPtr of NULL)
-	entvars_t* pevOwner = VARS(pev->owner);
-	CBaseEntity* pPlayer = GetClassPtr((CBaseEntity*)pevOwner);
-	(void)pPlayer;
+	// The original also looks up the owner here (1.7's CTF trail colors used it) and never uses
+	// it; with no owner, GetClassPtr(NULL) created an entity every think until the server ran
+	// out of edicts. Left out (reference/DEVIATIONS.md, Crashes in the original).
 
 	if (pev->waterlevel == 0)
 		return;

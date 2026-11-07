@@ -39,3 +39,12 @@ OZ's 386 in the original's order and runs its `exec` lines (`skill.cfg`, then th
   `GetSkillCvar` reads 0 for each, so any monster a map spawns gets 0 from the skill table, as in
   the original. OZ keeps the turret, sentry, bullet, hornet, charger, battery, healthkit and
   scientist-heal ones.
+
+## Crashes in the original
+
+- **Runes on a map without deathmatch starts** (`dlls/items.cpp` SpawnRunes, CRune::Move). The
+  original picks a random `info_player_deathmatch` and uses it unchecked, so such a map crashes it.
+  Ours spawns no rune there, and a rune due to move stays where it is.
+- **The grapple bolt doesn't create entities** (`dlls/grapple.cpp` CGrappleBolt::BubbleThink). The
+  original looks up its owner every think and never uses it; with no owner, `GetClassPtr(NULL)`
+  creates a new entity each time, until the server runs out of edicts. Ours drops the lookup.

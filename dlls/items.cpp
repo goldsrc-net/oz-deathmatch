@@ -257,7 +257,11 @@ void SpawnRunes(edict_t* pOwner, int iRune, int iUnused)
 	for (int i = 0; i < iSpot; i++)
 		pSpot = UTIL_FindEntityByClassname(pSpot, "info_player_deathmatch");
 
-	// Oz: no check for a map without deathmatch starts (pSpot NULL)
+	// The original has no check here: a map without deathmatch starts crashed it
+	// (reference/DEVIATIONS.md, Crashes in the original).
+	if (!pSpot)
+		return;
+
 	CBaseEntity* pEntity = CBaseEntity::Create("oz_rune", pSpot->pev->origin, pSpot->pev->angles, pOwner);
 	CRune* pRune = GetClassPtr((CRune*)pEntity->pev);
 
@@ -803,6 +807,14 @@ void CRune::Move()
 
 	for (int i = 0; i < iSpot; i++)
 		pSpot = UTIL_FindEntityByClassname(pSpot, "info_player_deathmatch");
+
+	// The original moves to pSpot unchecked, a crash on a map without deathmatch starts; ours
+	// leaves the rune where it is until the next move.
+	if (!pSpot)
+	{
+		m_flMoveTime = gpGlobals->time + oz_respawntimerune.value;
+		return;
+	}
 
 	pev->origin = pSpot->pev->origin;
 	pev->angles.x = 0;
