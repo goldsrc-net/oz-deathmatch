@@ -2786,6 +2786,9 @@ void CBasePlayer::UpdatePlayerSound()
 // toggle shared by all players); the regeneration rune's tick every 30 frames; the cloaking
 // rune's shimmer. halflife-updated's fix of setting m_afButtonLast on every path stays, with the
 // original's spot for it on the normal path (the respawn above reads the button first).
+// The regeneration rune's tick: 30 frames at 72 fps, 2004's default fps_max (original bug, fixed).
+static constexpr float REGEN_RUNE_TICK = 30.0f / 72.0f;
+
 void CBasePlayer::PostThink()
 {
 	static bool donethis = false; // orig .data 0x166234 (donethis.1288)
@@ -2922,11 +2925,15 @@ void CBasePlayer::PostThink()
 	{
 		if (pev->health < oz_maxhealth.value || pev->armorvalue < oz_maxcharge.value)
 		{
-			regencounter++;
+			// original bug, fixed (Steven 2026-11-07): the original ticked every 30 PostThinks, one per
+			// command the client sends, so the rune healed faster the higher the client's frame rate
+			// (about 5 health a second at 2004's 72 fps, 13 at 200). Ours ticks every 30/72 s, the
+			// rate a 72 fps client got, whatever the frame rate.
+			regencounter += gpGlobals->frametime;
 
-			if (regencounter == 30)
+			if (regencounter >= REGEN_RUNE_TICK)
 			{
-				regencounter = 0;
+				regencounter -= REGEN_RUNE_TICK;
 
 				pev->health += oz_regenrunehealth.value;
 				if (pev->health > oz_maxhealth.value)

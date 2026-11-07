@@ -376,7 +376,7 @@ public:
 	int wassuicide;				// orig +0x670; the death was the player's own doing: no booby trap blast
 	int m_iRune;				// orig +0x674; rune carried, GetRuneName's numbering (0 none, 1-15). VERIFY name
 	int m_iRandomRune;			// orig +0x678; the rune came from a random rune: drops as one (15). VERIFY name
-	float regencounter;			// orig +0x67c; frames counted toward the regeneration rune's next tick (30)
+	float regencounter;			// orig +0x67c (1.7 name); the original counted frames to 30, ours seconds to REGEN_RUNE_TICK
 								// orig +0x680: 4 bytes no code touches
 	float m_flCloakTime;		// orig +0x684; the cloaking rune shows the player until this time. VERIFY name
 	int m_iBotFovCheck;			// orig +0x698; aimbot probes sent unanswered. VERIFY name

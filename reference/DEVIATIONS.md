@@ -85,6 +85,17 @@ to halflife-updated's version (`../mod-rc2/reference/audit/FIXES.md`, mod-ozdm s
 - **`ForceClientDllUpdate` resends the whole HUD state** (`dlls/player.cpp`): hide HUD, FOV, weapon
   bits, room type and ammo, besides SDK 2.3's health and battery.
 
+## Original bugs fixed
+
+The cleanup pass for the original's own bugs comes later (CLAUDE.md); these were fixed early, each
+in its own `Fix original bug:` commit.
+
+- **The regeneration rune heals at a fixed rate** (`dlls/player.cpp` CBasePlayer::PostThink;
+  Steven, 2026-11-07). The original adds `regen_rune_health` and `regen_rune_armor` every 30
+  PostThinks, one per command the client sends, so the rune healed faster the higher the
+  player's frame rate: about 5 health a second at 2004's 72 fps default, 13 at 200. Ours ticks
+  every 30/72 s, what a 72 fps client got.
+
 ## Crashes in the original
 
 - **Runes on a map without deathmatch starts** (`dlls/items.cpp` SpawnRunes, CRune::Move). The
