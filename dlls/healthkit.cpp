@@ -21,6 +21,7 @@
 #include "items.h"
 #include "gamerules.h"
 #include "UserMessages.h"
+#include "game.h"
 
 class CHealthKit : public CItem
 {
@@ -37,7 +38,7 @@ class CHealthKit : public CItem
 };
 
 
-LINK_ENTITY_TO_CLASS(item_healthkit, CHealthKit);
+LINK_ENTITY_TO_CLASS(item_healthkit, CHealthKit); // orig 0xc8340
 
 /*
 TYPEDESCRIPTION	CHealthKit::m_SaveData[] = 
@@ -49,6 +50,7 @@ TYPEDESCRIPTION	CHealthKit::m_SaveData[] =
 IMPLEMENT_SAVERESTORE( CHealthKit, CItem);
 */
 
+// orig 0xc8360
 void CHealthKit::Spawn()
 {
 	Precache();
@@ -57,12 +59,14 @@ void CHealthKit::Spawn()
 	CItem::Spawn();
 }
 
+// orig 0xc83b0
 void CHealthKit::Precache()
 {
 	PRECACHE_MODEL("models/w_medkit.mdl");
 	PRECACHE_SOUND("items/smallmedkit1.wav");
 }
 
+// orig 0xc83f0
 bool CHealthKit::MyTouch(CBasePlayer* pPlayer)
 {
 	if (pPlayer->pev->deadflag != DEAD_NO)
@@ -70,7 +74,8 @@ bool CHealthKit::MyTouch(CBasePlayer* pPlayer)
 		return false;
 	}
 
-	if (pPlayer->TakeHealth(gSkillData.healthkitCapacity, DMG_GENERIC))
+	// Oz: healthkit replaces sk_healthkit
+	if (pPlayer->TakeHealth(oz_healthkit.value, DMG_GENERIC))
 	{
 		MESSAGE_BEGIN(MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev);
 		WRITE_STRING(STRING(pev->classname));
@@ -108,7 +113,7 @@ public:
 	void EXPORT Recharge();
 	bool KeyValue(KeyValueData* pkvd) override;
 	void Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value) override;
-	int ObjectCaps() override { return (CBaseToggle::ObjectCaps() | FCAP_CONTINUOUS_USE) & ~FCAP_ACROSS_TRANSITION; }
+	int ObjectCaps() override { return (CBaseToggle::ObjectCaps() | FCAP_CONTINUOUS_USE) & ~FCAP_ACROSS_TRANSITION; } // orig 0xc8cf0
 	bool Save(CSave& save) override;
 	bool Restore(CRestore& restore) override;
 
@@ -130,11 +135,12 @@ TYPEDESCRIPTION CWallHealth::m_SaveData[] =
 		DEFINE_FIELD(CWallHealth, m_flSoundTime, FIELD_TIME),
 };
 
-IMPLEMENT_SAVERESTORE(CWallHealth, CBaseEntity);
+IMPLEMENT_SAVERESTORE(CWallHealth, CBaseEntity); // orig 0xc8510, 0xc8560
 
-LINK_ENTITY_TO_CLASS(func_healthcharger, CWallHealth);
+LINK_ENTITY_TO_CLASS(func_healthcharger, CWallHealth); // orig 0xc85b0
 
 
+// orig 0xc85d0
 bool CWallHealth::KeyValue(KeyValueData* pkvd)
 {
 	if (FStrEq(pkvd->szKeyName, "style") ||
@@ -154,6 +160,7 @@ bool CWallHealth::KeyValue(KeyValueData* pkvd)
 	return CBaseToggle::KeyValue(pkvd);
 }
 
+// orig 0xc8810
 void CWallHealth::Spawn()
 {
 	Precache();
@@ -164,10 +171,11 @@ void CWallHealth::Spawn()
 	UTIL_SetOrigin(pev, pev->origin); // set size and link into world
 	UTIL_SetSize(pev, pev->mins, pev->maxs);
 	SET_MODEL(ENT(pev), STRING(pev->model));
-	m_iJuice = gSkillData.healthchargerCapacity;
+	m_iJuice = (int)oz_healthchargercapacity.value; // Oz: healthcharger_capacity
 	pev->frame = 0;
 }
 
+// orig 0xc88e0
 void CWallHealth::Precache()
 {
 	PRECACHE_SOUND("items/medshot4.wav");
@@ -176,6 +184,7 @@ void CWallHealth::Precache()
 }
 
 
+// orig 0xc8930
 void CWallHealth::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value)
 {
 	// Make sure that we have a caller
@@ -228,23 +237,28 @@ void CWallHealth::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE us
 
 
 	// charge the player
-	if (player->TakeHealth(1, DMG_GENERIC))
+	// Oz: healthcharger_amount per tick, the juice floored at 0
+	if (player->TakeHealth(oz_healthchargeramount.value, DMG_GENERIC))
 	{
-		m_iJuice--;
+		m_iJuice = (int)(m_iJuice - oz_healthchargeramount.value);
+		if (m_iJuice < 0)
+			m_iJuice = 0;
 	}
 
 	// govern the rate of charge
 	m_flNextCharge = gpGlobals->time + 0.1;
 }
 
+// orig 0xc8b90
 void CWallHealth::Recharge()
 {
 	EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/medshot4.wav", 1.0, ATTN_NORM);
-	m_iJuice = gSkillData.healthchargerCapacity;
+	m_iJuice = (int)oz_healthchargercapacity.value; // Oz
 	pev->frame = 0;
 	SetThink(&CWallHealth::SUB_DoNothing);
 }
 
+// orig 0xc8c20
 void CWallHealth::Off()
 {
 	// Stop looping sound.

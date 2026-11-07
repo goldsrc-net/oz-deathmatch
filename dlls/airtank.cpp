@@ -18,6 +18,7 @@
 #include "monsters.h"
 #include "weapons.h"
 #include "player.h"
+#include "game.h"
 
 class CAirtank : public CGrenade
 {
@@ -25,7 +26,7 @@ class CAirtank : public CGrenade
 	void Precache() override;
 	void EXPORT TankThink();
 	void EXPORT TankTouch(CBaseEntity* pOther);
-	int BloodColor() override { return DONT_BLEED; }
+	int BloodColor() override { return DONT_BLEED; } // orig 0x7b6e0
 	void Killed(entvars_t* pevAttacker, int iGib) override;
 
 	bool Save(CSave& save) override;
@@ -37,15 +38,16 @@ class CAirtank : public CGrenade
 };
 
 
-LINK_ENTITY_TO_CLASS(item_airtank, CAirtank);
+LINK_ENTITY_TO_CLASS(item_airtank, CAirtank); // orig 0x7b350
 TYPEDESCRIPTION CAirtank::m_SaveData[] =
 	{
 		DEFINE_FIELD(CAirtank, m_state, FIELD_BOOLEAN),
 };
 
-IMPLEMENT_SAVERESTORE(CAirtank, CGrenade);
+IMPLEMENT_SAVERESTORE(CAirtank, CGrenade); // orig 0x7b370, 0x7b3c0
 
 
+// orig 0x7b410
 void CAirtank::Spawn()
 {
 	Precache();
@@ -67,6 +69,7 @@ void CAirtank::Spawn()
 	m_state = true;
 }
 
+// orig 0x7b520
 void CAirtank::Precache()
 {
 	PRECACHE_MODEL("models/w_oxygen.mdl");
@@ -74,6 +77,7 @@ void CAirtank::Precache()
 }
 
 
+// orig 0x7b560
 void CAirtank::Killed(entvars_t* pevAttacker, int iGib)
 {
 	pev->owner = ENT(pevAttacker);
@@ -84,6 +88,7 @@ void CAirtank::Killed(entvars_t* pevAttacker, int iGib)
 }
 
 
+// orig 0x7b5d0
 void CAirtank::TankThink()
 {
 	// Fire trigger
@@ -92,6 +97,7 @@ void CAirtank::TankThink()
 }
 
 
+// orig 0x7b600
 void CAirtank::TankTouch(CBaseEntity* pOther)
 {
 	if (!pOther->IsPlayer())
@@ -105,7 +111,8 @@ void CAirtank::TankTouch(CBaseEntity* pOther)
 	}
 
 	// give player 12 more seconds of air
-	pOther->pev->air_finished = gpGlobals->time + 12;
+	// Oz: player_air seconds
+	pOther->pev->air_finished = gpGlobals->time + oz_playerair.value;
 
 	// suit recharge sound
 	EMIT_SOUND(ENT(pev), CHAN_VOICE, "doors/aliendoor3.wav", 1.0, ATTN_NORM);
