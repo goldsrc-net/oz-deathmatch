@@ -257,7 +257,11 @@ void CMP5::PrimaryAttack()
 
 	// halflife-updated's fix, kept: GetNextAttackDelay for SDK 2.3's accumulating cycle (seed; Steven
 	// 2026-11-07: unclear calls go to halflife-updated). The original adds the cycle to the last time.
+	// Both keep the floor at now + cycle, so a late shot never leaves the next one in the past.
 	m_flNextPrimaryAttack = GetNextAttackDelay(flCycle);
+
+	if (m_flNextPrimaryAttack < UTIL_WeaponTimeBase())
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + flCycle;
 
 	m_pPlayer->pev->punchangle.x -= oz_recoilmp5.value;
 

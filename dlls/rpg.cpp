@@ -351,7 +351,8 @@ void CRpg::Reload()
 	// Set the next attack time into the future so that WeaponIdle will get called more often
 	// than reload, allowing the RPG LTD to be updated
 
-	m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.5;
+	// halflife-updated's fix, kept (Steven 2026-11-07): GetNextAttackDelay evens out the fire-rate creep
+	m_flNextPrimaryAttack = GetNextAttackDelay(0.5);
 
 	if (0 != m_cActiveRockets && m_fSpotActive)
 	{
@@ -514,7 +515,7 @@ void CRpg::Holster()
 
 // orig 0xfefa0. Oz: recoil_rpg kicks the view up; firing empty waits 0.5 s before the next
 // try (1.7's "Oz rocket empty repeat sound"). Not halflife-updated's ResetEmptySound here
-// (9b9d6c3, HL25) or its GetNextAttackDelay (seed): the original's timing, as in mod-rc2.
+// (9b9d6c3, HL25), as in mod-rc2.
 void CRpg::PrimaryAttack()
 {
 	if (0 != m_iClip)
@@ -549,7 +550,8 @@ void CRpg::PrimaryAttack()
 
 		m_iClip--;
 
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.5;
+		// halflife-updated's fix, kept (Steven 2026-11-07): GetNextAttackDelay evens out the fire-rate creep
+		m_flNextPrimaryAttack = GetNextAttackDelay(1.5);
 		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.5;
 
 		// Oz variables (.value)

@@ -54,11 +54,18 @@ OZ's 386 in the original's order and runs its `exec` lines (`skill.cfg`, then th
 Steven, 2026-11-07: a halflife-updated change that is neither clearly a fix nor clearly design goes
 to halflife-updated's version (`../mod-rc2/reference/audit/FIXES.md`, mod-ozdm section).
 
-- **Weapon fire rates go through `GetNextAttackDelay`** (`dlls/crowbar.cpp`, `glock.cpp`, `mp5.cpp`,
-  `shotgun.cpp`, `crossbow.cpp`), at OZ's cycle cvars. It evens out the creep between a shot's due
-  time and the frame it fires on, as Valve's predicting client does. The original sets
-  `UTIL_WeaponTimeBase() + cycle` (the mp5 SDK 2.3's accumulating cycle). weapons-b's weapons keep
-  the original's timing (a design call made before the rule).
+- **Weapon fire rates go through `GetNextAttackDelay`** in every weapon where halflife-updated's
+  does (`dlls/crowbar.cpp`, `glock.cpp`, `mp5.cpp`, `shotgun.cpp`, `crossbow.cpp`, `rpg.cpp`,
+  `gauss.cpp`, `hornetgun.cpp`, `handgrenade.cpp`, `satchel.cpp`, `tripmine.cpp`,
+  `squeakgrenade.cpp`; not the python or egon), at OZ's cycle cvars and rune scales. It evens out
+  the creep between a shot's due time and the frame it fires on. The original sets
+  `UTIL_WeaponTimeBase() + cycle` (the mp5 and hornet gun SDK 2.3's accumulating cycle, both with
+  its floor at now + cycle, which stays). A fix by Steven, 2026-11-07 (FIXES.md, its
+  GetNextAttackDelay section).
+- **The glock reloads to its clip** (`dlls/glock.cpp` Reload, `clip_glock`). The original asks
+  DefaultReload for `clip_glock + 1` when a round is left (SDK 2.3's 18), which fills only to the
+  clip, so a full glock with reserve ammo replayed the reload on every press. halflife-updated's
+  (its seed's 17 in both branches), Steven 2026-11-07.
 - **A gauss beam that hits its own shooter does no hitgroup damage** (`dlls/gauss.cpp`
   CGauss::Fire). The original keeps the last hitgroup, so a reflected beam could headshot the
   shooter at `head_damage`.

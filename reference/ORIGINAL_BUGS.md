@@ -174,6 +174,10 @@ hl_wpn_glock.cpp CGlock::PrimaryAttack  the fire anim is SHOOT or SHOOT_EMPTY at
   (0x130830)
 hl_wpn_glock.cpp CGlock::Reload         idle time = gpGlobals->time + 10..15 on a 0-based     kept
   (0x130ff0)                            weapon clock: no idle for as long as the map has run
+hl_wpn_glock.cpp CGlock::Reload         asks DefaultReload for clip_glock + 1 when the clip   changed (halflife-
+  (0x130ff0)                            isn't empty (SDK 2.3's 18), which fills only to the   updated's: the
+                                        clip: a full glock with reserve ammo replays the      clip, both
+                                        reload on every press and gains nothing               branches)
 python.cpp CPython::WeaponIdle          a 10-15 random compared with 0.5/0.7/0.9: always the  kept
   (0xfd8d0)                             fidget
 mp5.cpp CMP5::PrimaryAttack (0xd9530)   oz_mp5spread outside 1-10 fires no bullet but spends  kept

@@ -268,10 +268,13 @@ void CGlock::Reload()
 
 	bool iResult;
 
+	// halflife-updated's fix, kept: both reload to the clip (9ae57ad's restyle of the seed's
+	// DefaultReload(17, ...)). The original asked for one more than the clip holds when it wasn't
+	// empty (SDK 2.3's 18), so a full glock with reserve ammo replayed the reload and gained nothing.
 	if (m_iClip == 0)
 		iResult = DefaultReload((int)oz_magazineglock.value, GLOCK_RELOAD, oz_reloadglock.value);
 	else
-		iResult = DefaultReload((int)(oz_magazineglock.value + 1), GLOCK_RELOAD_NOT_EMPTY, oz_reloadglock.value);
+		iResult = DefaultReload((int)oz_magazineglock.value, GLOCK_RELOAD_NOT_EMPTY, oz_reloadglock.value);
 
 	if (iResult)
 	{

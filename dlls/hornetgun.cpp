@@ -185,7 +185,9 @@ void CHgun::PrimaryAttack()
 	// Oz variables (.value)
 	if (m_pPlayer->m_iRune == RUNE_HASTE)
 	{
-		m_flNextPrimaryAttack = m_flNextPrimaryAttack + oz_cyclehivehand.value * 0.5;
+		// halflife-updated's fix, kept (Steven 2026-11-07): GetNextAttackDelay for SDK 2.3's accumulating
+		// cycle, which the original adds to the last time
+		m_flNextPrimaryAttack = GetNextAttackDelay(oz_cyclehivehand.value * 0.5);
 
 		if (m_flNextPrimaryAttack < UTIL_WeaponTimeBase())
 		{
@@ -194,7 +196,9 @@ void CHgun::PrimaryAttack()
 	}
 	else
 	{
-		m_flNextPrimaryAttack = m_flNextPrimaryAttack + oz_cyclehivehand.value;
+		// halflife-updated's fix, kept (Steven 2026-11-07): GetNextAttackDelay for SDK 2.3's accumulating
+		// cycle, which the original adds to the last time
+		m_flNextPrimaryAttack = GetNextAttackDelay(oz_cyclehivehand.value);
 
 		if (m_flNextPrimaryAttack < UTIL_WeaponTimeBase())
 		{
