@@ -33,13 +33,20 @@ A fork of `goldsrc-net/halflife-updated` branch `64bit-demo`, like mod-rockcrowb
 | Path | What |
 |---|---|
 | `game/oz/` | the mod's gamedir manifest (`liblist.gam`) |
-| `reference/` | the original libraries and everything derived from them (`reference/README.md`) |
+| `reference/` | the original libraries and everything derived from them (`reference/README.md`); `RECONSTRUCTION.md` is the work list |
 
 Original content: the 3.02 Steam server package at `/media/Data3/Projects/mods/oz/`
 (`x-oz3-02_for_steam/.../half-life/oz/`), downloaded from the sparksonline.org mirror the official
 site links (`/media/Data3/Projects/mods/oz/downloads/`).
 
+| `scripts/` | `build.sh`, the table generators from mod-rockcrowbar (`inventory`, `hierarchy`, `vtables`, `savefields`, `cvars`, `sdk_baseline`), `ghidra/` (`re.sh`; `ApplyRC.java` with VPTR 0x60) |
+
 ## Status (2026-11-07)
 
-Scaffolded: the gamedir manifest and the reference libraries. Next, DECOMPILE.md sections 1-6:
-build.sh, the tables, Ghidra, the base classes, the packages.
+- Scaffolded per `../DECOMPILE.md` sections 1-4: the gamedir manifest, the reference libraries,
+  build.sh (stock SDK builds on i386 and amd64), the tables (`reference/RECONSTRUCTION.md`: 2,964
+  functions, 246 in OZ's 12 own files; 391 cvars, 329 not in our build; 83 OZ-only entities).
+- OZ's CBaseEntity is 0x30 bytes bigger than RC 1.9's: the vtable pointer is at 0x60 (read off the
+  virtual calls in the disassembly), so OZ added members to it.
+- Next: section 5 (cvars, the base-class virtuals and members, OZ's own base classes, placeholder
+  files), then the packages. The 1.7 source's `// Oz` markers say which stock functions OZ changed.
