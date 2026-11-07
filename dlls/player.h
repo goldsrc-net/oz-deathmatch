@@ -358,6 +358,13 @@ public:
 
 	//True if the player is currently spawning.
 	bool m_bIsSpawning = false;
+
+	// items needs:
+	void PlayerReleaseGrapple(); // Oz: orig 0xfb3f0 (player.cpp); called by CGrappleBolt::BoltTouch
+	bool IsHanging;				 // Oz: orig +0x63c, 1.7's name; set by CGrappleBolt::PlayerStoppedThink
+	int m_iRuneHudTime;			 // Oz: orig +0x65c, VERIFY name; CItem::RuneHud sets 700, UpdateRuneInfo clears it
+	int m_iRune;				 // Oz: orig +0x674, VERIFY name; the rune held (RUNE_* in items.h), 0 for none
+	int m_iRandomRune;			 // Oz: orig +0x678, VERIFY name; 1 when the rune was a random one (RemoveRune then drops a random rune)
 };
 
 inline void CBasePlayer::SetWeaponBit(int id)

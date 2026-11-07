@@ -27,6 +27,7 @@
 #include "player.h"
 #include "skill.h"
 #include "gamerules.h"
+#include "game.h"
 
 class CRecharge : public CBaseToggle
 {
@@ -37,7 +38,7 @@ public:
 	void EXPORT Recharge();
 	bool KeyValue(KeyValueData* pkvd) override;
 	void Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value) override;
-	int ObjectCaps() override { return (CBaseToggle::ObjectCaps() | FCAP_CONTINUOUS_USE) & ~FCAP_ACROSS_TRANSITION; }
+	int ObjectCaps() override { return (CBaseToggle::ObjectCaps() | FCAP_CONTINUOUS_USE) & ~FCAP_ACROSS_TRANSITION; } // orig 0xc5ea0
 	bool Save(CSave& save) override;
 	bool Restore(CRestore& restore) override;
 
@@ -59,11 +60,12 @@ TYPEDESCRIPTION CRecharge::m_SaveData[] =
 		DEFINE_FIELD(CRecharge, m_flSoundTime, FIELD_TIME),
 };
 
-IMPLEMENT_SAVERESTORE(CRecharge, CBaseEntity);
+IMPLEMENT_SAVERESTORE(CRecharge, CBaseEntity); // orig 0xc5630, 0xc5680
 
-LINK_ENTITY_TO_CLASS(func_recharge, CRecharge);
+LINK_ENTITY_TO_CLASS(func_recharge, CRecharge); // orig 0xc56d0
 
 
+// orig 0xc56f0
 bool CRecharge::KeyValue(KeyValueData* pkvd)
 {
 	if (FStrEq(pkvd->szKeyName, "style") ||
@@ -83,6 +85,7 @@ bool CRecharge::KeyValue(KeyValueData* pkvd)
 	return CBaseToggle::KeyValue(pkvd);
 }
 
+// orig 0xc5930
 void CRecharge::Spawn()
 {
 	Precache();
@@ -93,10 +96,11 @@ void CRecharge::Spawn()
 	UTIL_SetOrigin(pev, pev->origin); // set size and link into world
 	UTIL_SetSize(pev, pev->mins, pev->maxs);
 	SET_MODEL(ENT(pev), STRING(pev->model));
-	m_iJuice = gSkillData.suitchargerCapacity;
+	m_iJuice = (int)oz_suitchargercapacity.value; // Oz: suitcharger_capacity
 	pev->frame = 0;
 }
 
+// orig 0xc5a00
 void CRecharge::Precache()
 {
 	PRECACHE_SOUND("items/suitcharge1.wav");
@@ -105,8 +109,12 @@ void CRecharge::Precache()
 }
 
 
+// orig 0xc5a50
 void CRecharge::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value)
 {
+	// Oz: max_charge is the armor cap, suitcharger_amount the step
+	int iMaxCharge = (int)oz_maxcharge.value;
+
 	// if it's not a player, ignore
 	if (!FClassnameIs(pActivator->pev, "player"))
 		return;
@@ -167,26 +175,28 @@ void CRecharge::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useT
 
 
 	// charge the player
-	if (m_hActivator->pev->armorvalue < 100)
+	if (m_hActivator->pev->armorvalue < iMaxCharge)
 	{
-		m_iJuice--;
-		m_hActivator->pev->armorvalue += 1;
+		m_iJuice = (int)(m_iJuice - oz_suitchargeramount.value);
+		m_hActivator->pev->armorvalue += oz_suitchargeramount.value;
 
-		if (m_hActivator->pev->armorvalue > 100)
-			m_hActivator->pev->armorvalue = 100;
+		if (m_hActivator->pev->armorvalue > iMaxCharge)
+			m_hActivator->pev->armorvalue = iMaxCharge;
 	}
 
 	// govern the rate of charge
 	m_flNextCharge = gpGlobals->time + 0.1;
 }
 
+// orig 0xc5d60
 void CRecharge::Recharge()
 {
-	m_iJuice = gSkillData.suitchargerCapacity;
+	m_iJuice = (int)oz_suitchargercapacity.value; // Oz
 	pev->frame = 0;
 	SetThink(&CRecharge::SUB_DoNothing);
 }
 
+// orig 0xc5dd0
 void CRecharge::Off()
 {
 	// Stop looping sound.

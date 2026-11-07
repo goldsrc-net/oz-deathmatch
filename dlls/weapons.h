@@ -154,12 +154,18 @@ public:
 // bullet types
 typedef enum
 {
+	// items edit (FireBulletsPlayer's switch): OZ's three sniper/superglock types shift the values
+	// after BULLET_PLAYER_9MM; names from the OZ 1.7 source, values checked against 3.02's callers
 	BULLET_NONE = 0,
-	BULLET_PLAYER_9MM,		// glock
-	BULLET_PLAYER_MP5,		// mp5
-	BULLET_PLAYER_357,		// python
-	BULLET_PLAYER_BUCKSHOT, // shotgun
-	BULLET_PLAYER_CROWBAR,	// crowbar swipe
+	BULLET_PLAYER_9MM,			  // glock
+	BULLET_PLAYER_9MM_SNIPER,	  // Oz glock sniper
+	BULLET_PLAYER_9MM_SUPERGLOCK, // Oz super glock rune
+	BULLET_PLAYER_MP5,			  // mp5
+	BULLET_PLAYER_MP5_SNIPER,	  // Oz mp5 sniper
+	BULLET_PLAYER_357,			  // python
+	BULLET_PLAYER_357_SNIPER,	  // Oz 357 sniper
+	BULLET_PLAYER_BUCKSHOT,		  // shotgun
+	BULLET_PLAYER_CROWBAR,		  // crowbar swipe
 
 	BULLET_MONSTER_9MM,
 	BULLET_MONSTER_MP5,
