@@ -1,0 +1,144 @@
+file	function	size	oz_names
+airtank.cpp	CAirtank::TankTouch	221	oz_playerair
+cbase.cpp	CBaseEntity::TakeHealth	123	max_health
+client.cpp	ClientCommand	5976	CGrappleBolt RemoveRune Teleport bot_number oz_grappledisable oz_logrune oz_lowgravruneamount
+client.cpp	ClientDisconnect	522	RemoveRune
+client.cpp	Host_Say	1359	oz_logchat
+client.cpp	StartFrame	2377	CBaseBotGlobals HandleAutoAdjDifficulty MarkLocationFavorable bot_number oz_minclients
+client.cpp	UpdateClientData	830	oz_advspec
+combat.cpp	CBaseEntity::FireBulletsPlayer	2882	oz_damage357sniper oz_damagemp5 oz_damagemp5sniper oz_damagesglock
+combat.cpp	CBaseMonster::BecomeDead	82	max_health
+combat.cpp	CBaseMonster::MakeDamageBloodDecal	415	max_health
+combat.cpp	CBaseMonster::TraceAttack	338	oz_armdamage oz_chestdamage oz_headdamage oz_legdamage oz_stomachdamage
+controller.cpp	CController::Move	1494	SetConditions
+controller.cpp	CController::StartTask	564	HasConditions SetConditions
+crossbow.cpp	CCrossbow::FireBolt	858	oz_cyclexbow oz_recoilxbow oz_speedxbowair oz_speedxbowwater
+crossbow.cpp	CCrossbow::FireSniperBolt	702	oz_cyclexbow2 oz_damagexbowsniper
+crossbow.cpp	CCrossbow::GetItemInfo	222	oz_magazinexbow oz_maxxbowbolts oz_weightxbow
+crossbow.cpp	CCrossbow::Reload	304	oz_magazinexbow oz_reloadxbow
+crossbow.cpp	CCrossbow::SecondaryAttack	246	oz_zoomamountxbow
+crossbow.cpp	CCrossbow::Spawn	157	oz_disablexbow oz_givewithxbow
+crossbow.cpp	CCrossbowBolt::BoltTouch	1420	oz_damagexbow
+crossbow.cpp	CCrossbowBolt::ExplodeThink	424	oz_damagexbowexplode
+crowbar.cpp	CCrowbar::GetItemInfo	157	oz_weightcrowbar
+crowbar.cpp	CCrowbar::Precache	233	flying_crowbar
+crowbar.cpp	CCrowbar::Swing	2284	oz_cyclecrowbar oz_cyclecrowbar2 oz_damagecrowbar
+effects.cpp	CLightning::KeyValue	3409	Radius
+egon.cpp	CEgon::Attack	867	oz_waterweapons
+egon.cpp	CEgon::GetItemInfo	204	oz_maxuranium oz_weightegon
+egon.cpp	CEgon::Spawn	157	oz_disableegon oz_givewithegon
+func_break.cpp	CBreakable::Die	2187	ExplosionMagnitude
+game.cpp	GameDLLInit	8537	bot_aa_max bot_blood bot_bottom_color bot_chat bot_debug bot_dontchat bot_enable bot_jump bot_mercy bot_model bot_name bot_number bot_observer bot_skill bot_skill_aa bot_speed bot_top_color bot_trait_accuracy bot_trait_aggression bot_trait_chat bot_trait_jump bot_trait_perception bot_trait_reflexes bot_wp_crossbow bot_wp_crowbar bot_wp_egon bot_wp_gauss bot_wp_glock bot_wp_handgrenade bot_wp_hornetgun bot_wp_mp5 bot_wp_python bot_wp_rpg bot_wp_satchel bot_wp_shotgun bot_wp_snark bot_wp_tripmine cvar_bot oz_Display_Player_Message oz_GameDesc oz_activeweapon oz_advspec oz_allowproximity oz_ammorespawntime oz_armdamage oz_autoswitch oz_battery oz_bloodamount oz_boobytrapdamage oz_cheatdetect oz_chestdamage oz_cloakrunenumber oz_colorbluegaussprimary oz_colorbluegausssecondary oz_colorbluegrapple oz_colorbluehornet1 oz_colorbluehornet2 oz_colorbluerpg oz_colorbluetripmine oz_colorgreengaussprimary oz_colorgreengausssecondary oz_colorgreengrapple oz_colorgreenhornet1 oz_colorgreenhornet2 oz_colorgreenrpg oz_colorgreentripmine oz_colorredgaussprimary oz_colorredgausssecondary oz_colorredgrapple oz_colorredhornet1 oz_colorredhornet2 oz_colorredrpg oz_colorredtripmine oz_crowbarrunenumber oz_customrunemodel oz_cycle357 oz_cycle3572 oz_cyclecrowbar oz_cyclecrowbar2 oz_cyclegauss oz_cycleglock oz_cycleglock2 oz_cyclehivehand oz_cyclehivehand2 oz_cyclem203 oz_cyclemp5 oz_cyclemp5sniper oz_cyclesglock oz_cycleshotgun oz_cycleshotgun2 oz_cyclexbow oz_cyclexbow2 oz_damage357 oz_damage357sniper oz_damagecrowbar oz_damageegonnarrow oz_damageegonwide oz_damageflyingcrowbar oz_damagegauss oz_damagegaussmax oz_damageglock oz_damageglocksniper oz_damagehgrenade oz_damagehomingrpg oz_damagehornet oz_damagem203 oz_damagemp5 oz_damagemp5sniper oz_damagerpg oz_damagesatchel oz_damagesglock oz_damageshotgun oz_damagesnarkbite oz_damagesnarkpop oz_damagetripmine oz_damagexbow oz_damagexbowexplode oz_damagexbowsniper oz_disable357 oz_disableegon oz_disablegauss oz_disableglock oz_disablehgrenade oz_disablehivehand oz_disablem203 oz_disablemp5 oz_disablerpg oz_disablesatchel oz_disableshotgun oz_disablesnark oz_disabletripmine oz_disablexbow oz_fallingdamage oz_flaretime oz_fragruneamount oz_fragrunenumber oz_gaussmaxchargetime oz_give357rounds oz_givechainbox oz_giveglockclip oz_givem203 oz_givemp5clip oz_giverpgclip oz_giveshells oz_giveuranium oz_givewith357 oz_givewithegon oz_givewithgauss oz_givewithglock oz_givewithhgrenade oz_givewithhivehand oz_givewithm203 oz_givewithmp5 oz_givewithrpg oz_givewithsatchel oz_givewithshotgun oz_givewithsnark oz_givewithtripmine oz_givewithxbow oz_givexbowbolts oz_glocksniper oz_grappleairspeed oz_grappledamage oz_grappledisable oz_grappledragspeed oz_grappleglow oz_grapplesound oz_grapplewaterspeed oz_grenadetime oz_hasterunenumber oz_headdamage oz_healthchargeramount oz_healthchargercapacity oz_healthchargerrecharge oz_healthkit oz_homing oz_hookrunenumber oz_identifyrunenumber oz_itemrespawntime oz_legdamage oz_lightlevel oz_line1 oz_line2 oz_link oz_logchat oz_logrune oz_lowgravruneamount oz_lowgravrunenumber oz_magazine357 oz_magazineglock oz_magazinemp5 oz_magazineshotgun oz_magazinexbow oz_max357rounds oz_max9mm oz_maxcharge oz_maxhealth oz_maxhealthwithvamprune oz_maxhgrenades oz_maxhornets oz_maxm203 oz_maxrockets oz_maxsatchels oz_maxshells oz_maxsnarks oz_maxtripmines oz_maxuranium oz_maxxbowbolts oz_minbot oz_minclients oz_mp5sniper oz_mp5spread oz_mp5tracers oz_nightops oz_pelletsdoubleshotgun oz_pelletsshotgun oz_picture oz_playerair oz_playerid oz_playerspeed oz_pointsperdeath oz_pointsperkill oz_pointspersuicide oz_pointsperteamkill oz_pointsperworldkill oz_protectrunenumber oz_randomgrapplecolor oz_randomrunenumber oz_randomtripminecolor oz_recoil357 oz_recoilgauss oz_recoilglock oz_recoilhivehand oz_recoilm203 oz_recoilmp5 oz_recoilrpg oz_recoilshotgun oz_recoilshotgun2 oz_recoilxbow oz_regenrunearmor oz_regenrunehealth oz_regenrunenumber oz_reload357 oz_reloadglock oz_reloadmp5 oz_reloadrpg oz_reloadshotgun oz_reloadxbow oz_respawntimerune oz_runemodel oz_runescheme oz_satchelareadetect oz_satchelchargetime oz_sectripammoused oz_shake_amp oz_shake_dur oz_shake_enable oz_shake_freq oz_shake_radius oz_silenceglock oz_silencemp5 oz_skygrapple oz_snarkhealth oz_snarktime oz_spectators oz_speedhgrenade oz_speedhornet oz_speedhornet2 oz_speedm203 oz_speedrpgair oz_speedrpgwater oz_speedsatchel oz_speedxbowair oz_speedxbowwater oz_start357 oz_start357rounds oz_start9mm oz_startcharge oz_startegon oz_startgauss oz_startglock oz_starthealth oz_starthgrenades oz_starthivehand oz_startlongjump oz_startm203 oz_startmp5 oz_startrockets oz_startrpg oz_startsatchels oz_startshells oz_startshotgun oz_startsnarks oz_starttripmines oz_starturanium oz_startxbow oz_startxbowbolts oz_stomachdamage oz_suitchargeramount oz_suitchargercapacity oz_suitchargerrecharge oz_superglockrunenumber oz_superhookrunedamage oz_superspeedrunenumber oz_teleportrunenumber oz_traprunenumber oz_vamprunenumber oz_waterweapons oz_weaponrespawntime oz_weight357 oz_weightcrowbar oz_weightegon oz_weightgauss oz_weightglock oz_weighthgrenade oz_weighthivehand oz_weightmp5 oz_weightrpg oz_weightsatchel oz_weightshotgun oz_weightsnark oz_weighttripmine oz_weightxbow oz_zoomamount357 oz_zoomamountglock oz_zoomamountmp5 oz_zoomamountxbow runfolder
+gauss.cpp	CGauss::GetItemInfo	204	oz_maxuranium oz_weightgauss
+gauss.cpp	CGauss::PrimaryAttack	387	oz_cyclegauss oz_waterweapons
+gauss.cpp	CGauss::SecondaryAttack	1751	oz_gaussmaxchargetime
+gauss.cpp	CGauss::Spawn	157	oz_disablegauss oz_givewithgauss
+gauss.cpp	CGauss::StartFire	672	oz_damagegauss oz_damagegaussmax oz_recoilgauss
+ggrenade.cpp	CGrenade::ShootContact	278	oz_damagem203
+ggrenade.cpp	CGrenade::ShootTimed	509	oz_boobytrapdamage oz_damagehgrenade
+h_battery.cpp	CRecharge::Recharge	99	oz_suitchargercapacity
+h_battery.cpp	CRecharge::Spawn	198	oz_suitchargercapacity
+h_battery.cpp	CRecharge::Use	773	oz_maxcharge oz_suitchargeramount
+handgrenade.cpp	CHandGrenade::GetItemInfo	204	oz_maxhgrenades oz_weighthgrenade
+handgrenade.cpp	CHandGrenade::Spawn	174	oz_damagehgrenade oz_disablehgrenade oz_givewithhgrenade
+handgrenade.cpp	CHandGrenade::WeaponIdle	1321	ShootFlare oz_flaretime oz_grenadetime oz_speedhgrenade
+healthkit.cpp	CHealthKit::MyTouch	284	healthkit oz_healthkit
+healthkit.cpp	CHealthKit::Precache	58	healthkit
+healthkit.cpp	CHealthKit::Spawn	71	healthkit
+healthkit.cpp	CWallHealth::KeyValue	561	healthkit
+healthkit.cpp	CWallHealth::ObjectCaps	12	healthkit
+healthkit.cpp	CWallHealth::Off	205	healthkit
+healthkit.cpp	CWallHealth::Precache	77	healthkit
+healthkit.cpp	CWallHealth::Recharge	139	healthkit oz_healthchargercapacity
+healthkit.cpp	CWallHealth::Restore	76	healthkit
+healthkit.cpp	CWallHealth::Save	76	healthkit
+healthkit.cpp	CWallHealth::Spawn	198	healthkit oz_healthchargercapacity
+healthkit.cpp	CWallHealth::Use	595	healthkit oz_healthchargeramount
+hornet.cpp	CHornet::IgniteTrail	491	oz_colorbluehornet1 oz_colorbluehornet2 oz_colorgreenhornet1 oz_colorgreenhornet2 oz_colorredhornet1 oz_colorredhornet2
+hornet.cpp	CHornet::Spawn	527	oz_damagehornet oz_speedhornet2
+hornetgun.cpp	CHgun::AddToPlayer	252	oz_maxhornets
+hornetgun.cpp	CHgun::GetItemInfo	204	oz_maxhornets oz_weighthivehand
+hornetgun.cpp	CHgun::PrimaryAttack	817	oz_cyclehivehand
+hornetgun.cpp	CHgun::Reload	272	oz_maxhornets
+hornetgun.cpp	CHgun::SecondaryAttack	1542	oz_cyclehivehand2
+hornetgun.cpp	CHgun::Spawn	167	oz_disablehivehand oz_givewithhivehand
+monsters.cpp	CBaseMonster::FCheckAITrigger	604	max_health
+monsters.cpp	CBaseMonster::HandleAnimEvent	855	max_health
+monsters.cpp	CBaseMonster::MonsterInit	329	max_health
+monsters.cpp	CBaseMonster::MonsterInitDead	208	max_health
+monsters.cpp	CBaseMonster::Move	1448	SetConditions
+monsters.cpp	CBaseMonster::MovementComplete	170	HasConditions
+mp5.cpp	CMP5::GetItemInfo	262	oz_magazinemp5 oz_max9mm oz_maxm203 oz_weightmp5
+mp5.cpp	CMP5::PrimaryAttack	2907	oz_cyclemp5 oz_cyclemp5sniper oz_mp5spread oz_mp5tracers oz_recoilmp5 oz_silencemp5 oz_waterweapons
+mp5.cpp	CMP5::Reload	211	oz_magazinemp5 oz_reloadmp5
+mp5.cpp	CMP5::SecondaryAttack	1107	oz_cyclem203 oz_mp5sniper oz_recoilm203 oz_speedm203 oz_waterweapons oz_zoomamountmp5
+mp5.cpp	CMP5::Spawn	181	oz_disablemp5 oz_givewithmp5
+multiplay_gamerules.cpp	CHalfLifeMultiplay::FShouldSwitchWeapon	188	oz_autoswitch
+multiplay_gamerules.cpp	CHalfLifeMultiplay::FlAmmoRespawnTime	42	oz_ammorespawntime
+multiplay_gamerules.cpp	CHalfLifeMultiplay::FlItemRespawnTime	42	oz_itemrespawntime
+multiplay_gamerules.cpp	CHalfLifeMultiplay::FlWeaponRespawnTime	107	oz_weaponrespawntime
+multiplay_gamerules.cpp	CHalfLifeMultiplay::IPointsForKill	96	oz_fragruneamount oz_pointsperkill
+multiplay_gamerules.cpp	CHalfLifeMultiplay::PlayerKilled	853	oz_pointspersuicide oz_pointsperworldkill
+multiplay_gamerules.cpp	CHalfLifeMultiplay::PlayerSpawn	2022	oz_activeweapon oz_max357rounds oz_max9mm oz_maxm203 oz_maxrockets oz_maxshells oz_maxuranium oz_maxxbowbolts oz_picture oz_start357 oz_start357rounds oz_start9mm oz_startegon oz_startgauss oz_startglock oz_starthgrenades oz_starthivehand oz_startlongjump oz_startm203 oz_startmp5 oz_startrockets oz_startrpg oz_startsatchels oz_startshells oz_startshotgun oz_startsnarks oz_starttripmines oz_starturanium oz_startxbow oz_startxbowbolts
+nodes.cpp	CGraph::AllocNodes	106	InitNavArray
+nodes.cpp	CGraph::InitGraph	239	InitNavArray
+plats.cpp	CGunTarget::Spawn	243	max_health
+plats.cpp	CGunTarget::Use	160	max_health
+player.cpp	CBasePlayer::CheatImpulseCommands	2566	ammo_357
+player.cpp	CBasePlayer::Observer_HandleButtons	258	StopObserver oz_spectators
+player.cpp	CBasePlayer::PlayerDeathThink	1716	RemoveRune
+player.cpp	CBasePlayer::PostThink	2636	Identify oz_fallingdamage oz_maxcharge oz_maxhealth oz_playerid oz_regenrunearmor oz_regenrunehealth
+player.cpp	CBasePlayer::PreThink	1129	DetectCheats
+player.cpp	CBasePlayer::Spawn	2570	IsBot bot_blood bot_speed max_health oz_cloakrunenumber oz_crowbarrunenumber oz_fragrunenumber oz_hasterunenumber oz_hookrunenumber oz_identifyrunenumber oz_lowgravrunenumber oz_maxhealth oz_picture oz_playerair oz_playerspeed oz_protectrunenumber oz_randomrunenumber oz_regenrunenumber oz_startcharge oz_starthealth oz_superglockrunenumber oz_superspeedrunenumber oz_teleportrunenumber oz_traprunenumber oz_vamprunenumber
+player.cpp	CBasePlayer::TakeDamage	2084	oz_maxhealthwithvamprune oz_shake_amp oz_shake_dur oz_shake_enable oz_shake_freq oz_shake_radius
+player.cpp	CBasePlayer::TraceAttack	502	oz_armdamage oz_chestdamage oz_headdamage oz_legdamage oz_stomachdamage
+player.cpp	CBasePlayer::UpdateClientData	2400	oz_nightops
+player.cpp	CBasePlayer::WaterMove	1282	oz_playerair
+python.cpp	CPython::GetItemInfo	232	oz_magazine357 oz_max357rounds oz_weight357
+python.cpp	CPython::PrimaryAttack	1010	oz_cycle357 oz_cycle3572 oz_recoil357 oz_waterweapons
+python.cpp	CPython::Reload	291	oz_magazine357 oz_reload357
+python.cpp	CPython::SecondaryAttack	245	oz_zoomamount357
+python.cpp	CPython::Spawn	181	oz_disable357 oz_givewith357
+python.cpp	ammo_357	32	ammo_357
+rpg.cpp	CRpg::GetItemInfo	204	oz_maxrockets oz_weightrpg
+rpg.cpp	CRpg::PrimaryAttack	766	oz_recoilrpg
+rpg.cpp	CRpg::Reload	299	oz_reloadrpg
+rpg.cpp	CRpg::Spawn	217	oz_disablerpg oz_givewithrpg
+rpg.cpp	CRpgRocket::FollowThink	2216	oz_homing oz_speedrpgair oz_speedrpgwater
+rpg.cpp	CRpgRocket::IgniteThink	470	oz_colorbluerpg oz_colorgreenrpg oz_colorredrpg
+rpg.cpp	CRpgRocket::Spawn	394	oz_damagerpg
+satchel.cpp	CSatchel::AddToPlayer	102	AddWeapon
+satchel.cpp	CSatchel::GetItemInfo	204	oz_maxsatchels oz_weightsatchel
+satchel.cpp	CSatchel::Spawn	157	oz_disablesatchel oz_givewithsatchel
+satchel.cpp	CSatchel::Throw	436	oz_speedsatchel
+satchel.cpp	CSatchelCharge::SatchelThink	462	oz_allowproximity oz_satchelareadetect
+satchel.cpp	CSatchelCharge::Spawn	345	oz_damagesatchel oz_satchelchargetime
+schedule.cpp	CBaseMonster::RunTask	2141	HasConditions SetConditions
+schedule.cpp	CBaseMonster::StartTask	5440	HasConditions SetConditions
+shotgun.cpp	CShotgun::GetItemInfo	232	oz_magazineshotgun oz_maxshells oz_weightshotgun
+shotgun.cpp	CShotgun::PrimaryAttack	1687	oz_cycleshotgun oz_pelletsshotgun oz_recoilshotgun oz_waterweapons
+shotgun.cpp	CShotgun::Reload	731	oz_magazineshotgun oz_reloadshotgun
+shotgun.cpp	CShotgun::SecondaryAttack	2376	oz_cycleshotgun2 oz_pelletsdoubleshotgun oz_recoilshotgun2 oz_waterweapons
+shotgun.cpp	CShotgun::Spawn	157	oz_disableshotgun oz_givewithshotgun
+shotgun.cpp	CShotgun::WeaponIdle	633	oz_magazineshotgun
+sound.cpp	EMIT_GROUPNAME_SUIT	150	memfgets
+squeakgrenade.cpp	CSqueak::GetItemInfo	204	oz_maxsnarks oz_weightsnark
+squeakgrenade.cpp	CSqueak::Spawn	199	oz_disablesnark oz_givewithsnark
+squeakgrenade.cpp	CSqueakGrenade::HuntThink	1985	oz_snarktime
+squeakgrenade.cpp	CSqueakGrenade::Spawn	495	oz_damagesnarkpop oz_snarkhealth oz_snarktime
+squeakgrenade.cpp	CSqueakGrenade::SuperBounceTouch	908	oz_damagesnarkbite oz_damagesnarkpop oz_snarktime
+talkmonster.cpp	CTalkMonster::GetScheduleOfType	1014	max_health
+talkmonster.cpp	CTalkMonster::RunTask	1187	HasConditions SetConditions
+talkmonster.cpp	CTalkMonster::StartTask	1138	HasConditions SetConditions
+teamplay_gamerules.cpp	CHalfLifeTeamplay::IPointsForKill	202	oz_fragruneamount oz_pointsperkill oz_pointsperteamkill
+tripmine.cpp	CTripmine::GetItemInfo	204	oz_maxtripmines oz_weighttripmine
+tripmine.cpp	CTripmine::PrimaryAttack	812	oz_randomtripminecolor tripmodeset
+tripmine.cpp	CTripmine::Spawn	288	oz_disabletripmine oz_givewithtripmine
+tripmine.cpp	CTripmineGrenade::MakeBeam	809	oz_colorbluetripmine oz_colorgreentripmine oz_colorredtripmine
+tripmine.cpp	CTripmineGrenade::Spawn	617	oz_damagetripmine
+util.cpp	UTIL_BloodDrips	454	oz_bloodamount
+util.cpp	UTIL_EmitAmbientSound	137	FixedUnsigned16
+weapons.cpp	CBasePlayerWeapon::AddToPlayer	182	AddWeapon
+weapons.cpp	W_Precache	862	ammo_357
+world.cpp	CWorld::Precache	2309	night_ops oz_lightlevel oz_nightops
+world.cpp	bodyque	32	InitBodyQue
