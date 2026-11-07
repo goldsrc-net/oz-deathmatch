@@ -34,12 +34,11 @@ A fork of `goldsrc-net/halflife-updated` branch `64bit-demo`, like mod-rockcrowb
 |---|---|
 | `game/oz/` | the mod's gamedir manifest (`liblist.gam`) |
 | `reference/` | the original libraries and everything derived from them (`reference/README.md`); `RECONSTRUCTION.md` is the work list |
+| `scripts/` | `build.sh`, the table generators from mod-rockcrowbar (`inventory`, `hierarchy`, `vtables`, `savefields`, `cvars`, `sdk_baseline`), `ghidra/` (`re.sh`; `ApplyRC.java` with VPTR 0x60) |
 
 Original content: the 3.02 Steam server package at `/media/Data3/Projects/mods/oz/`
 (`x-oz3-02_for_steam/.../half-life/oz/`), downloaded from the sparksonline.org mirror the official
 site links (`/media/Data3/Projects/mods/oz/downloads/`).
-
-| `scripts/` | `build.sh`, the table generators from mod-rockcrowbar (`inventory`, `hierarchy`, `vtables`, `savefields`, `cvars`, `sdk_baseline`), `ghidra/` (`re.sh`; `ApplyRC.java` with VPTR 0x60) |
 
 ## Status (2026-11-07)
 
