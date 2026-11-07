@@ -3650,9 +3650,3 @@ void CNodeViewer::DrawThink()
 		m_iDraw++;
 	}
 }
-
-
-// TEMP STUB (world): real one belongs in bot_nav.cpp (CGraph::InitNavArray, orig 0x08d5e0)
-void CGraph::InitNavArray()
-{
-}
