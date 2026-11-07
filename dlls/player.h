@@ -358,6 +358,10 @@ public:
 
 	//True if the player is currently spawning.
 	bool m_bIsSpawning = false;
+
+	// weapons-b needs:
+	int m_iRune = 0;	// orig +0x674: the active rune (items package's name; RUNE_* in items.h, 4 = haste)
+	bool Flare = false; // orig +0x640: the hand grenade's next throw is a flare (1.7's "Oz flares" name). VERIFY name
 };
 
 inline void CBasePlayer::SetWeaponBit(int id)

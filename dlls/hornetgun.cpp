@@ -22,15 +22,10 @@
 #include "hornet.h"
 #include "gamerules.h"
 #include "UserMessages.h"
+#include "game.h"
 
-static float GetRechargeTime()
-{
-	if (gpGlobals->maxClients > 1)
-	{
-		return 0.3f;
-	}
-	return 0.5f;
-}
+// No GetRechargeTime: halflife-updated's 0.3 s multiplayer recharge (37ed1d9, HL25) is a balance
+// change; the original recharges a hornet every 0.5 s (0.25 s with the Haste Rune).
 
 enum firemode_e
 {
@@ -39,26 +34,36 @@ enum firemode_e
 };
 
 
-LINK_ENTITY_TO_CLASS(weapon_hornetgun, CHgun);
+LINK_ENTITY_TO_CLASS(weapon_hornetgun, CHgun); // orig 0xca230
 
+// orig 0xca250
 bool CHgun::IsUseable()
 {
 	return true;
 }
 
+// orig 0xca260. Oz: disable_hivehand removes it; give_with_hivehand hornets.
 void CHgun::Spawn()
 {
+	if (oz_disablehivehand.value > 0)
+	{
+		Kill();
+		return;
+	}
+
 	Precache();
 	m_iId = WEAPON_HORNETGUN;
 	SET_MODEL(ENT(pev), "models/w_hgun.mdl");
 
-	m_iDefaultAmmo = HIVEHAND_DEFAULT_GIVE;
+	// Oz variables (.value)
+	m_iDefaultAmmo = (int)oz_givewithhivehand.value;
 	m_iFirePhase = 0;
 
 	FallInit(); // get ready to fall down.
 }
 
 
+// orig 0xca310
 void CHgun::Precache()
 {
 	PRECACHE_MODEL("models/v_hgun.mdl");
@@ -70,24 +75,38 @@ void CHgun::Precache()
 	UTIL_PrecacheOther("hornet");
 }
 
+// orig 0xca390. SDK 2.3's: in multiplayer the player's hornets are set to max_hornets (capped at
+// 250), then WeapPickup (design per mod-rc2's FIXES.md; halflife-updated sets the default ammo
+// instead and announces the pickup from CBasePlayer::AddPlayerItem). VERIFY: here AddPlayerItem
+// extracts the default ammo after this, capped at max_hornets, so the count matches the
+// original's except when max_hornets is above 250.
 void CHgun::AddToPlayer(CBasePlayer* pPlayer)
 {
+	int iMaxHornets = (int)oz_maxhornets.value;
+	if (iMaxHornets > 250)
+		iMaxHornets = 250;
+
+	CBasePlayerWeapon::AddToPlayer(pPlayer);
+
 #ifndef CLIENT_DLL
 	if (g_pGameRules->IsMultiplayer())
 	{
 		// in multiplayer, all hivehands come full.
-		m_iDefaultAmmo = HORNET_MAX_CARRY;
+		pPlayer->m_rgAmmo[PrimaryAmmoIndex()] = iMaxHornets;
 	}
-#endif
 
-	CBasePlayerWeapon::AddToPlayer(pPlayer);
+	MESSAGE_BEGIN(MSG_ONE, gmsgWeapPickup, NULL, pPlayer->pev);
+	WRITE_BYTE(m_iId);
+	MESSAGE_END();
+#endif
 }
 
+// orig 0xca490. Oz: max_hornets, weight_hivehand.
 bool CHgun::GetItemInfo(ItemInfo* p)
 {
 	p->pszName = STRING(pev->classname);
 	p->pszAmmo1 = "Hornets";
-	p->iMaxAmmo1 = HORNET_MAX_CARRY;
+	p->iMaxAmmo1 = (int)oz_maxhornets.value;
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
@@ -95,17 +114,19 @@ bool CHgun::GetItemInfo(ItemInfo* p)
 	p->iPosition = 3;
 	p->iId = m_iId = WEAPON_HORNETGUN;
 	p->iFlags = ITEM_FLAG_NOAUTOSWITCHEMPTY | ITEM_FLAG_NOAUTORELOAD;
-	p->iWeight = HORNETGUN_WEIGHT;
+	p->iWeight = (int)oz_weighthivehand.value; // Oz weight
 
 	return true;
 }
 
 
+// orig 0xca560
 bool CHgun::Deploy()
 {
 	return DefaultDeploy("models/v_hgun.mdl", "models/p_hgun.mdl", HGUN_UP, "hive");
 }
 
+// orig 0xca5a0
 void CHgun::Holster()
 {
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
@@ -119,11 +140,13 @@ void CHgun::Holster()
 }
 
 
+// orig 0xca640. Oz: cycle_hivehand's refire, halved with the Haste Rune. The ammo test is the
+// original's on m_rgAmmo (halflife-updated reads ammo_hornets for its client, f347954).
 void CHgun::PrimaryAttack()
 {
 	Reload();
 
-	if (m_pPlayer->ammo_hornets <= 0)
+	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
 	{
 		return;
 	}
@@ -134,7 +157,7 @@ void CHgun::PrimaryAttack()
 	CBaseEntity* pHornet = CBaseEntity::Create("hornet", m_pPlayer->GetGunPosition() + gpGlobals->v_forward * 16 + gpGlobals->v_right * 8 + gpGlobals->v_up * -12, m_pPlayer->pev->v_angle, m_pPlayer->edict());
 	pHornet->pev->velocity = gpGlobals->v_forward * 300;
 
-	m_flRechargeTime = gpGlobals->time + GetRechargeTime();
+	m_flRechargeTime = gpGlobals->time + 0.5;
 #endif
 
 	m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]--;
@@ -150,22 +173,32 @@ void CHgun::PrimaryAttack()
 	flags = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL(flags, m_pPlayer->edict(), m_usHornetFire, 0.0, g_vecZero, g_vecZero, 0.0, 0.0, 0, 0, 0, 0);
+	PLAYBACK_EVENT_FULL(flags, m_pPlayer->edict(), m_usHornetFire, 0.0, g_vecZero, g_vecZero, 0.0, 0.0, FIREMODE_TRACK, 0, 0, 0);
 
 
 
 	// player "shoot" animation
 	m_pPlayer->SetAnimation(PLAYER_ATTACK1);
 
-	m_flNextPrimaryAttack = GetNextAttackDelay(0.25);
+	// Oz runes - haste
+	// Oz variables (.value)
+	if (m_pPlayer->m_iRune == 4) // Haste Rune
+	{
+		m_flNextPrimaryAttack = m_flNextPrimaryAttack + oz_cyclehivehand.value * 0.5;
 
-	if (m_flNextPrimaryAttack < UTIL_WeaponTimeBase())
-	{
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.25;
+		if (m_flNextPrimaryAttack < UTIL_WeaponTimeBase())
+		{
+			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclehivehand.value * 0.5;
+		}
 	}
-	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] == 0)
+	else
 	{
-		m_flNextPrimaryAttack += GetRechargeTime();
+		m_flNextPrimaryAttack = m_flNextPrimaryAttack + oz_cyclehivehand.value;
+
+		if (m_flNextPrimaryAttack < UTIL_WeaponTimeBase())
+		{
+			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + oz_cyclehivehand.value;
+		}
 	}
 
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat(m_pPlayer->random_seed, 10, 15);
@@ -173,11 +206,15 @@ void CHgun::PrimaryAttack()
 
 
 
+// orig 0xca980. Oz: cycle_hivehand2's refire for both attacks, halved with the Haste Rune. The
+// event's iparam1 is FIREMODE_FAST, as SDK 2.3's (Valve's client reads it); halflife-updated
+// sends 0 (f347954). The idle time is set from gpGlobals->time, not UTIL_WeaponTimeBase(), so
+// after a secondary shot the idle animations wait the server's uptime (original bug, kept).
 void CHgun::SecondaryAttack()
 {
 	Reload();
 
-	if (m_pPlayer->ammo_hornets <= 0)
+	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
 	{
 		return;
 	}
@@ -231,7 +268,7 @@ void CHgun::SecondaryAttack()
 
 	pHornet->SetThink(&CHornet::StartDart);
 
-	m_flRechargeTime = gpGlobals->time + GetRechargeTime();
+	m_flRechargeTime = gpGlobals->time + 0.5;
 #endif
 
 	int flags;
@@ -241,7 +278,7 @@ void CHgun::SecondaryAttack()
 	flags = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL(flags, m_pPlayer->edict(), m_usHornetFire, 0.0, g_vecZero, g_vecZero, 0.0, 0.0, 0, 0, 0, 0);
+	PLAYBACK_EVENT_FULL(flags, m_pPlayer->edict(), m_usHornetFire, 0.0, g_vecZero, g_vecZero, 0.0, 0.0, FIREMODE_FAST, 0, 0, 0);
 
 
 	m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]--;
@@ -251,34 +288,42 @@ void CHgun::SecondaryAttack()
 	// player "shoot" animation
 	m_pPlayer->SetAnimation(PLAYER_ATTACK1);
 
-	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.1;
-	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] == 0)
-	{
-		m_flRechargeTime = gpGlobals->time + 0.5;
-		m_flNextSecondaryAttack += 0.5;
-		m_flNextPrimaryAttack += 0.5;
-	}
-	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat(m_pPlayer->random_seed, 10, 15);
+	// Oz runes - haste
+	// Oz variables (.value)
+	if (m_pPlayer->m_iRune == 4) // Haste Rune
+		m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + oz_cyclehivehand2.value * 0.5;
+	else
+		m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + oz_cyclehivehand2.value;
+
+	m_flTimeWeaponIdle = gpGlobals->time + UTIL_SharedRandomFloat(m_pPlayer->random_seed, 10, 15);
 }
 
 
+// orig 0xcaf90. Oz: up to max_hornets (compared as floats), twice as fast with the Haste Rune.
 void CHgun::Reload()
 {
 #ifndef CLIENT_DLL
-	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] >= HORNET_MAX_CARRY)
+	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] >= oz_maxhornets.value)
 		return;
 
-	while (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] < HORNET_MAX_CARRY && m_flRechargeTime < gpGlobals->time)
+	while (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] < oz_maxhornets.value && m_flRechargeTime < gpGlobals->time)
 	{
 		m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]++;
-		m_flRechargeTime += GetRechargeTime();
+		// Oz runes - haste
+		if (m_pPlayer->m_iRune == 4) // Haste Rune
+			m_flRechargeTime += 0.25;
+		else
+			m_flRechargeTime += 0.5;
 	}
 
+	// halflife-updated's fix, kept: ammo_hornets follows the recharge, for client prediction
+	// (f347954, halflife#556); the original doesn't tabulate here
 	m_pPlayer->TabulateAmmo();
 #endif
 }
 
 
+// orig 0xcb0a0
 void CHgun::WeaponIdle()
 {
 	Reload();

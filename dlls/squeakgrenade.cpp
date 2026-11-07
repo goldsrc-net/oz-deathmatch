@@ -21,6 +21,7 @@
 #include "player.h"
 #include "soundent.h"
 #include "gamerules.h"
+#include "game.h"
 
 enum w_squeak_e
 {
@@ -57,12 +58,12 @@ class CSqueakGrenade : public CGrenade
 	float m_flNextHit;
 	Vector m_posPrev;
 	EHANDLE m_hOwner;
-	int m_iMyClass;
+	int m_iMyClass; // orig +0x2d8, unsaved
 };
 
 float CSqueakGrenade::m_flNextBounceSoundTime = 0;
 
-LINK_ENTITY_TO_CLASS(monster_snark, CSqueakGrenade);
+LINK_ENTITY_TO_CLASS(monster_snark, CSqueakGrenade); // orig 0x10e4d0
 TYPEDESCRIPTION CSqueakGrenade::m_SaveData[] =
 	{
 		DEFINE_FIELD(CSqueakGrenade, m_flDie, FIELD_TIME),
@@ -73,10 +74,12 @@ TYPEDESCRIPTION CSqueakGrenade::m_SaveData[] =
 		DEFINE_FIELD(CSqueakGrenade, m_hOwner, FIELD_EHANDLE),
 };
 
-IMPLEMENT_SAVERESTORE(CSqueakGrenade, CGrenade);
+IMPLEMENT_SAVERESTORE(CSqueakGrenade, CGrenade); // Save orig 0x10e4f0, Restore orig 0x10e540
 
-#define SQUEEK_DETONATE_DELAY 15.0
+// Oz: the detonate delay is snark_time (oz_snarktime), here and in the pitch formulas
+#define SQUEEK_DETONATE_DELAY oz_snarktime.value
 
+// orig 0x10e590
 int CSqueakGrenade::Classify()
 {
 	if (m_iMyClass != 0)
@@ -99,6 +102,7 @@ int CSqueakGrenade::Classify()
 	return CLASS_ALIEN_BIOWEAPON;
 }
 
+// orig 0x10e630. Oz: snark_health, damage_snarkpop, snark_time.
 void CSqueakGrenade::Spawn()
 {
 	Precache();
@@ -117,11 +121,11 @@ void CSqueakGrenade::Spawn()
 
 	pev->flags |= FL_MONSTER;
 	pev->takedamage = DAMAGE_AIM;
-	pev->health = gSkillData.snarkHealth;
+	pev->health = oz_snarkhealth.value; // Oz variables (.value)
 	pev->gravity = 0.5;
 	pev->friction = 0.5;
 
-	pev->dmg = gSkillData.snarkDmgPop;
+	pev->dmg = oz_damagesnarkpop.value; // Oz variables (.value)
 
 	m_flDie = gpGlobals->time + SQUEEK_DETONATE_DELAY;
 
@@ -136,6 +140,7 @@ void CSqueakGrenade::Spawn()
 	ResetSequenceInfo();
 }
 
+// orig 0x10e820
 void CSqueakGrenade::Precache()
 {
 	PRECACHE_MODEL("models/w_squeak.mdl");
@@ -149,6 +154,7 @@ void CSqueakGrenade::Precache()
 }
 
 
+// orig 0x10e8d0
 void CSqueakGrenade::Killed(entvars_t* pevAttacker, int iGib)
 {
 	pev->model = iStringNull; // make invisible
@@ -180,6 +186,7 @@ void CSqueakGrenade::Killed(entvars_t* pevAttacker, int iGib)
 	CBaseMonster::Killed(pevAttacker, GIB_ALWAYS);
 }
 
+// orig 0x10ea40
 void CSqueakGrenade::GibMonster()
 {
 	EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "common/bodysplat.wav", 0.75, ATTN_NORM, 0, 200);
@@ -187,6 +194,9 @@ void CSqueakGrenade::GibMonster()
 
 
 
+// orig 0x10ea90. halflife-updated's fix, kept: the movetype goes back to bounce only from fly
+// (d6629ed, halflife#3175); SDK 2.3's "else if (pev->movetype = MOVETYPE_FLY)" assigns, with the
+// same result for a snark (fly or bounce).
 void CSqueakGrenade::HuntThink()
 {
 	// ALERT( at_console, "think\n" );
@@ -307,6 +317,8 @@ void CSqueakGrenade::HuntThink()
 }
 
 
+// orig 0x10f260. Oz: damage_snarkbite, damage_snarkpop. No FL_WORLDBRUSH exclusion
+// (halflife-updated's e9986c0, HL25: design).
 void CSqueakGrenade::SuperBounceTouch(CBaseEntity* pOther)
 {
 	float flpitch;
@@ -330,7 +342,7 @@ void CSqueakGrenade::SuperBounceTouch(CBaseEntity* pOther)
 	// higher pitch as squeeker gets closer to detonation time
 	flpitch = 155.0 - 60.0 * ((m_flDie - gpGlobals->time) / SQUEEK_DETONATE_DELAY);
 
-	if (0 != pOther->pev->takedamage && m_flNextAttack < gpGlobals->time && 0 == (pOther->pev->flags & FL_WORLDBRUSH))
+	if (0 != pOther->pev->takedamage && m_flNextAttack < gpGlobals->time)
 	{
 		// attack!
 
@@ -342,13 +354,13 @@ void CSqueakGrenade::SuperBounceTouch(CBaseEntity* pOther)
 			{
 				// ALERT( at_console, "hit enemy\n");
 				ClearMultiDamage();
-				pOther->TraceAttack(pev, gSkillData.snarkDmgBite, gpGlobals->v_forward, &tr, DMG_SLASH);
+				pOther->TraceAttack(pev, oz_damagesnarkbite.value, gpGlobals->v_forward, &tr, DMG_SLASH); // Oz
 				if (m_hOwner != NULL)
 					ApplyMultiDamage(pev, m_hOwner->pev);
 				else
 					ApplyMultiDamage(pev, pev);
 
-				pev->dmg += gSkillData.snarkDmgPop; // add more explosion damage
+				pev->dmg += oz_damagesnarkpop.value; // add more explosion damage (Oz)
 				// m_flDie += 2.0; // add more life
 
 				// make bite sound
@@ -399,18 +411,25 @@ void CSqueakGrenade::SuperBounceTouch(CBaseEntity* pOther)
 
 #endif
 
-LINK_ENTITY_TO_CLASS(weapon_snark, CSqueak);
+LINK_ENTITY_TO_CLASS(weapon_snark, CSqueak); // orig 0x10f5f0
 
 
+// orig 0x10f610. Oz: disable_snark removes it; give_with_snark snarks.
 void CSqueak::Spawn()
 {
+	if (oz_disablesnark.value > 0)
+	{
+		Kill();
+		return;
+	}
+
 	Precache();
 	m_iId = WEAPON_SNARK;
 	SET_MODEL(ENT(pev), "models/w_sqknest.mdl");
 
 	FallInit(); //get ready to fall down.
 
-	m_iDefaultAmmo = SNARK_DEFAULT_GIVE;
+	m_iDefaultAmmo = (int)oz_givewithsnark.value; // Oz variables (.value)
 
 	pev->sequence = 1;
 	pev->animtime = gpGlobals->time;
@@ -418,6 +437,7 @@ void CSqueak::Spawn()
 }
 
 
+// orig 0x10f6e0
 void CSqueak::Precache()
 {
 	PRECACHE_MODEL("models/w_sqknest.mdl");
@@ -431,18 +451,19 @@ void CSqueak::Precache()
 }
 
 
+// orig 0x10f780. Oz: max_snarks, weight_snark.
 bool CSqueak::GetItemInfo(ItemInfo* p)
 {
 	p->pszName = STRING(pev->classname);
 	p->pszAmmo1 = "Snarks";
-	p->iMaxAmmo1 = SNARK_MAX_CARRY;
+	p->iMaxAmmo1 = (int)oz_maxsnarks.value;
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
 	p->iSlot = 4;
 	p->iPosition = 3;
 	p->iId = m_iId = WEAPON_SNARK;
-	p->iWeight = SNARK_WEIGHT;
+	p->iWeight = (int)oz_weightsnark.value; // Oz weight
 	p->iFlags = ITEM_FLAG_LIMITINWORLD | ITEM_FLAG_EXHAUSTIBLE;
 
 	return true;
@@ -450,6 +471,8 @@ bool CSqueak::GetItemInfo(ItemInfo* p)
 
 
 
+// orig 0x10f850. halflife-updated's fix, kept: the idle time after DefaultDeploy's 1 s, so the
+// deploy animation finishes (33385ad, halflife#2495); the original returns DefaultDeploy's result.
 bool CSqueak::Deploy()
 {
 	// play hunt sound
@@ -473,6 +496,7 @@ bool CSqueak::Deploy()
 }
 
 
+// orig 0x10f920
 void CSqueak::Holster()
 {
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
@@ -490,32 +514,25 @@ void CSqueak::Holster()
 }
 
 
+// orig 0x10fa00. SDK 2.3's throw (halflife-updated's aim-down throw is HL25's, e9986c0: design).
 void CSqueak::PrimaryAttack()
 {
 	if (0 != m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType])
 	{
-		Vector forward, right, up;
-		Vector vEntityForward = m_pPlayer->pev->v_angle;
-		vEntityForward[0] = 0;
-		AngleVectors(vEntityForward, &forward, &right, &up);
-		vEntityForward = forward;
-
-		AngleVectors(m_pPlayer->pev->v_angle, &forward, &right, &up);
+		UTIL_MakeVectors(m_pPlayer->pev->v_angle);
 		TraceResult tr;
 		Vector trace_origin;
 
 		// HACK HACK:  Ugly hacks to handle change in origin based on new physics code for players
 		// Move origin up if crouched and start trace a bit outside of body ( 20 units instead of 16 )
-		float flAimDownFraction = m_pPlayer->pev->v_angle[0] > 0 ? m_pPlayer->pev->v_angle[0] / 90.f : 0;
 		trace_origin = m_pPlayer->pev->origin;
 		if ((m_pPlayer->pev->flags & FL_DUCKING) != 0)
 		{
-			trace_origin = trace_origin - (flAimDownFraction + 1) * (VEC_HULL_MIN - VEC_DUCK_HULL_MIN);
+			trace_origin = trace_origin - (VEC_HULL_MIN - VEC_DUCK_HULL_MIN);
 		}
 
-		Vector vTraceForward = (flAimDownFraction * vEntityForward) + (1 - flAimDownFraction) * forward;
 		// find place to toss monster
-		UTIL_TraceLine(trace_origin + vTraceForward * 24, trace_origin + forward * 60, dont_ignore_monsters, NULL, &tr);
+		UTIL_TraceLine(trace_origin + gpGlobals->v_forward * 20, trace_origin + gpGlobals->v_forward * 64, dont_ignore_monsters, NULL, &tr);
 
 		int flags;
 #ifdef CLIENT_WEAPONS
@@ -526,14 +543,14 @@ void CSqueak::PrimaryAttack()
 
 		PLAYBACK_EVENT_FULL(flags, m_pPlayer->edict(), m_usSnarkFire, 0.0, g_vecZero, g_vecZero, 0.0, 0.0, 0, 0, 0, 0);
 
-		if (tr.fAllSolid == 0 && tr.fStartSolid == 0 && tr.flFraction > 0)
+		if (tr.fAllSolid == 0 && tr.fStartSolid == 0 && tr.flFraction > 0.25)
 		{
 			// player "shoot" animation
 			m_pPlayer->SetAnimation(PLAYER_ATTACK1);
 
 #ifndef CLIENT_DLL
 			CBaseEntity* pSqueak = CBaseEntity::Create("monster_snark", tr.vecEndPos, m_pPlayer->pev->v_angle, m_pPlayer->edict());
-			pSqueak->pev->velocity = vTraceForward * 200 + m_pPlayer->pev->velocity;
+			pSqueak->pev->velocity = gpGlobals->v_forward * 200 + m_pPlayer->pev->velocity;
 #endif
 
 			// play hunt sound
@@ -550,18 +567,20 @@ void CSqueak::PrimaryAttack()
 
 			m_fJustThrown = true;
 
-			m_flNextPrimaryAttack = GetNextAttackDelay(0.3);
+			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.3;
 			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.0;
 		}
 	}
 }
 
 
+// orig 0x10fd70
 void CSqueak::SecondaryAttack()
 {
 }
 
 
+// orig 0x10fd80
 void CSqueak::WeaponIdle()
 {
 	if (m_flTimeWeaponIdle > UTIL_WeaponTimeBase())

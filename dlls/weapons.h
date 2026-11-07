@@ -36,6 +36,7 @@ public:
 	} SATCHELCODE;
 
 	static CGrenade* ShootTimed(entvars_t* pevOwner, Vector vecStart, Vector vecVelocity, float time);
+	static CGrenade* ShootFlare(entvars_t* pevOwner, Vector vecStart, Vector vecVelocity, float time); // Oz: orig 0xc36b0
 	static CGrenade* ShootContact(entvars_t* pevOwner, Vector vecStart, Vector vecVelocity);
 	static CGrenade* ShootSatchelCharge(entvars_t* pevOwner, Vector vecStart, Vector vecVelocity);
 	static void UseSatchelCharges(entvars_t* pevOwner, SATCHELCODE code);
@@ -789,6 +790,7 @@ public:
 	void Reload() override;
 	int iItemSlot() override { return 4; }
 	bool GetItemInfo(ItemInfo* p) override;
+	void AddToPlayer(CBasePlayer* pPlayer) override; // Oz: orig 0xfedf0 (WeapPickup)
 
 	bool Deploy() override;
 	bool CanHolster() override;
@@ -869,6 +871,7 @@ public:
 	void Precache() override;
 	int iItemSlot() override { return 4; }
 	bool GetItemInfo(ItemInfo* p) override;
+	void AddToPlayer(CBasePlayer* pPlayer) override; // Oz: orig 0xc0750 (WeapPickup)
 
 	bool Deploy() override;
 	void Holster() override;
@@ -953,6 +956,7 @@ public:
 	void Precache() override;
 	int iItemSlot() override { return 4; }
 	bool GetItemInfo(ItemInfo* p) override;
+	void AddToPlayer(CBasePlayer* pPlayer) override; // Oz: orig 0xb2d20 (WeapPickup)
 
 	bool Deploy() override;
 	void Holster() override;
@@ -965,8 +969,11 @@ public:
 	void EndAttack();
 	void Attack();
 	void PrimaryAttack() override;
-	bool ShouldWeaponIdle() override { return true; }
+	void SecondaryAttack() override; // Oz: orig 0xb3350 (the wide beam)
+	// No ShouldWeaponIdle or CanHolster in the original's CEgon (halflife-updated's are dropped)
 	void WeaponIdle() override;
+	static int g_fireAnims1[]; // Oz: the old SDK's fire animations
+	static int g_fireAnims2[];
 
 	float m_flAmmoUseTime; // since we use < 1 point of ammo per update, we subtract ammo on a timer.
 
@@ -976,7 +983,6 @@ public:
 	void Fire(const Vector& vecOrigSrc, const Vector& vecDir);
 
 	bool HasAmmo();
-	bool CanHolster();
 
 	void UseAmmo(int count);
 
@@ -993,15 +999,11 @@ public:
 #endif
 	}
 
-	unsigned short m_usEgonStop;
-
 private:
 	float m_shootTime;
 	EGON_FIREMODE m_fireMode;
 	float m_shakeTime;
 	bool m_deployed;
-
-	unsigned short m_usEgonFire;
 };
 
 enum hgun_e
@@ -1018,6 +1020,8 @@ class CHgun : public CBasePlayerWeapon
 {
 public:
 #ifndef CLIENT_DLL
+	// VERIFY: the original's CHgun has no save table (no CHgun::Save in funcfile.tsv); this one and
+	// its table in weapons.cpp (weapons-a's file) are halflife-updated's
 	bool Save(CSave& save) override;
 	bool Restore(CRestore& restore) override;
 	static TYPEDESCRIPTION m_SaveData[];
@@ -1076,6 +1080,7 @@ public:
 	bool GetItemInfo(ItemInfo* p) override;
 
 	void PrimaryAttack() override;
+	void SecondaryAttack() override; // Oz: orig 0xc7cf0 (flare)
 	bool Deploy() override;
 	bool CanHolster() override;
 	void Holster() override;
@@ -1132,7 +1137,6 @@ public:
 	void Holster() override;
 	void WeaponIdle() override;
 	void Throw();
-	void Detonate();
 
 	bool UseDecrement() override
 	{
@@ -1172,9 +1176,12 @@ public:
 	}
 
 	void PrimaryAttack() override;
+	void SecondaryAttack() override; // Oz: orig 0x11f8c0 (hidden-beam mine)
 	bool Deploy() override;
 	void Holster() override;
 	void WeaponIdle() override;
+	void tripmodeset(int iMode); // Oz: orig 0x11fd10
+	void PlaceMine();			 // the attacks' shared body (inline in each in the original)
 
 	bool UseDecrement() override
 	{

@@ -21,15 +21,17 @@
 #include "player.h"
 #include "gamerules.h"
 #include "UserMessages.h"
+#include "game.h"
 
-LINK_ENTITY_TO_CLASS(weapon_rpg, CRpg);
+LINK_ENTITY_TO_CLASS(weapon_rpg, CRpg); // orig 0xfdaf0
 
 #ifndef CLIENT_DLL
 
-LINK_ENTITY_TO_CLASS(laser_spot, CLaserSpot);
+LINK_ENTITY_TO_CLASS(laser_spot, CLaserSpot); // orig 0xfdb10
 
 //=========================================================
 //=========================================================
+// orig 0xfdb30
 CLaserSpot* CLaserSpot::CreateSpot()
 {
 	CLaserSpot* pSpot = GetClassPtr((CLaserSpot*)NULL);
@@ -42,6 +44,7 @@ CLaserSpot* CLaserSpot::CreateSpot()
 
 //=========================================================
 //=========================================================
+// orig 0xfdb80
 void CLaserSpot::Spawn()
 {
 	Precache();
@@ -59,6 +62,7 @@ void CLaserSpot::Spawn()
 //=========================================================
 // Suspend- make the laser sight invisible.
 //=========================================================
+// orig 0xfdc10
 void CLaserSpot::Suspend(float flSuspendTime)
 {
 	pev->effects |= EF_NODRAW;
@@ -70,6 +74,7 @@ void CLaserSpot::Suspend(float flSuspendTime)
 //=========================================================
 // Revive - bring a suspended laser sight back.
 //=========================================================
+// orig 0xfdc60
 void CLaserSpot::Revive()
 {
 	pev->effects &= ~EF_NODRAW;
@@ -77,13 +82,18 @@ void CLaserSpot::Revive()
 	SetThink(NULL);
 }
 
+// orig 0xfdc90
 void CLaserSpot::Precache()
 {
 	PRECACHE_MODEL("sprites/laserdot.spr");
 };
 
-LINK_ENTITY_TO_CLASS(rpg_rocket, CRpgRocket);
+LINK_ENTITY_TO_CLASS(rpg_rocket, CRpgRocket); // orig 0xfdcc0
 
+// halflife-updated's fix, kept: the launcher's rocket count drops however the rocket goes (40d3849,
+// halflife#3264), held by an EHANDLE (8092ab5, halflife#1719). The original decrements it through a
+// raw CRpg* in RocketTouch only, so a rocket that detonates in FollowThink leaves the launcher
+// unable to reload while its laser is on.
 CRpgRocket::~CRpgRocket()
 {
 	if (m_hLauncher)
@@ -95,6 +105,7 @@ CRpgRocket::~CRpgRocket()
 
 //=========================================================
 //=========================================================
+// orig 0xfdce0
 CRpgRocket* CRpgRocket::CreateRpgRocket(Vector vecOrigin, Vector vecAngles, CBaseEntity* pOwner, CRpg* pLauncher)
 {
 	CRpgRocket* pRocket = GetClassPtr((CRpgRocket*)NULL);
@@ -112,6 +123,7 @@ CRpgRocket* CRpgRocket::CreateRpgRocket(Vector vecOrigin, Vector vecAngles, CBas
 
 //=========================================================
 //=========================================================
+// orig 0xfdd70. Oz: damage from damage_rpg.
 void CRpgRocket::Spawn()
 {
 	Precache();
@@ -137,11 +149,12 @@ void CRpgRocket::Spawn()
 
 	pev->nextthink = gpGlobals->time + 0.4;
 
-	pev->dmg = gSkillData.plrDmgRPG;
+	pev->dmg = oz_damagerpg.value;
 }
 
 //=========================================================
 //=========================================================
+// orig 0xfdf00. The original's m_pLauncher->m_cActiveRockets-- is in the destructor (above).
 void CRpgRocket::RocketTouch(CBaseEntity* pOther)
 {
 	STOP_SOUND(edict(), CHAN_VOICE, "weapons/rocket1.wav");
@@ -150,6 +163,7 @@ void CRpgRocket::RocketTouch(CBaseEntity* pOther)
 
 //=========================================================
 //=========================================================
+// orig 0xfdf60
 void CRpgRocket::Precache()
 {
 	PRECACHE_MODEL("models/rpgrocket.mdl");
@@ -158,6 +172,7 @@ void CRpgRocket::Precache()
 }
 
 
+// orig 0xfdfc0. Oz: the trail's colour from color_*_rpg.
 void CRpgRocket::IgniteThink()
 {
 	// pev->movetype = MOVETYPE_TOSS;
@@ -176,10 +191,10 @@ void CRpgRocket::IgniteThink()
 	WRITE_SHORT(m_iTrail);	 // model
 	WRITE_BYTE(40);			 // life
 	WRITE_BYTE(5);			 // width
-	WRITE_BYTE(224);		 // r, g, b
-	WRITE_BYTE(224);		 // r, g, b
-	WRITE_BYTE(255);		 // r, g, b
-	WRITE_BYTE(255);		 // brightness
+	WRITE_BYTE((int)oz_colorredrpg.value);	 // r, g, b
+	WRITE_BYTE((int)oz_colorgreenrpg.value); // r, g, b
+	WRITE_BYTE((int)oz_colorbluerpg.value);	 // r, g, b
+	WRITE_BYTE(255);						 // brightness
 
 	MESSAGE_END(); // move PHS/PVS data sending into here (SEND_ALL, SEND_PVS, SEND_PHS)
 
@@ -199,6 +214,10 @@ CRpg* CRpgRocket::GetLauncher()
 	return (CRpg*)((CBaseEntity*)m_hLauncher);
 }
 
+// orig 0xfe1a0. Oz: with rpg_homing 1 the rocket steers for anything that takes damage within
+// 1000 units instead of the laser spot, and the speed caps come from speed_rpg_water/speed_rpg_air.
+// halflife-updated's launcher release (8192 units or 6 s) and sky detonation (9b9d6c3, HL25) are not
+// in the original: design, left out.
 void CRpgRocket::FollowThink()
 {
 	CBaseEntity* pOther = NULL;
@@ -212,29 +231,52 @@ void CRpgRocket::FollowThink()
 	vecTarget = gpGlobals->v_forward;
 	flMax = 4096;
 
-	// Examine all entities within a reasonable radius
-	while ((pOther = UTIL_FindEntityByClassname(pOther, "laser_spot")) != NULL)
+	// Oz homing rpg. The original looks up the owner as a player and never uses it (1.7 tested
+	// its ishoming here); GetClassPtr is kept for its side effect on an owner with no private data.
+	entvars_t* pevOwner = VARS(pev->owner);
+	GetClassPtr((CBasePlayer*)pevOwner); // VERIFY: unused result, literal reading of the call at 0xfe214
+	if (oz_homing.value == 1)
 	{
-		Vector vSpotLocation = pOther->pev->origin;
-
-		/*if (UTIL_PointContents(vSpotLocation) == CONTENTS_SKY)
+		// Examine all entities within a reasonable radius
+		while ((pOther = UTIL_FindEntityInSphere(pOther, pev->origin, 1000)) != NULL)
 		{
-			ALERT(at_console, "laser spot is in the sky...\n");
-		}*/
+			if (pOther->pev->takedamage == DAMAGE_NO || pOther->pev->deadflag == DEAD_DEAD)
+				continue;
 
-		UTIL_TraceLine(pev->origin, vSpotLocation, dont_ignore_monsters, ENT(pev), &tr);
-		//ALERT(at_console, "fraction: %f\n", tr.flFraction);
+			UTIL_TraceLine(pev->origin, pOther->pev->origin, dont_ignore_monsters, ENT(pev), &tr);
 
-		if (tr.flFraction >= 0.90)
-		{
-			vecDir = pOther->pev->origin - pev->origin;
-			flDist = vecDir.Length();
-			vecDir = vecDir.Normalize();
-			flDot = DotProduct(gpGlobals->v_forward, vecDir);
-			if ((flDot > 0) && (flDist * (1 - flDot) < flMax))
+			if (tr.flFraction >= 0.90)
 			{
-				flMax = flDist * (1 - flDot);
-				vecTarget = vecDir;
+				vecDir = pOther->pev->origin - pev->origin;
+				flDist = vecDir.Length();
+				vecDir = vecDir.Normalize();
+				flDot = DotProduct(gpGlobals->v_forward, vecDir);
+				if ((flDot > 0) && (flDist * (1 - flDot) < flMax))
+				{
+					flMax = flDist * (1 - flDot);
+					vecTarget = vecDir;
+				}
+			}
+		}
+	}
+	else
+	{
+		// Examine all entities within a reasonable radius
+		while ((pOther = UTIL_FindEntityByClassname(pOther, "laser_spot")) != NULL)
+		{
+			UTIL_TraceLine(pev->origin, pOther->pev->origin, dont_ignore_monsters, ENT(pev), &tr);
+			// ALERT( at_console, "%f\n", tr.flFraction );
+			if (tr.flFraction >= 0.90)
+			{
+				vecDir = pOther->pev->origin - pev->origin;
+				flDist = vecDir.Length();
+				vecDir = vecDir.Normalize();
+				flDot = DotProduct(gpGlobals->v_forward, vecDir);
+				if ((flDot > 0) && (flDist * (1 - flDot) < flMax))
+				{
+					flMax = flDist * (1 - flDot);
+					vecTarget = vecDir;
+				}
 			}
 		}
 	}
@@ -251,7 +293,8 @@ void CRpgRocket::FollowThink()
 			// go slow underwater
 			if (pev->velocity.Length() > 300)
 			{
-				pev->velocity = pev->velocity.Normalize() * 300;
+				// Oz variables (.value)
+				pev->velocity = pev->velocity.Normalize() * oz_speedrpgwater.value;
 			}
 			UTIL_BubbleTrail(pev->origin - pev->velocity * 0.1, pev->origin, 4);
 		}
@@ -259,7 +302,8 @@ void CRpgRocket::FollowThink()
 		{
 			if (pev->velocity.Length() > 2000)
 			{
-				pev->velocity = pev->velocity.Normalize() * 2000;
+				// Oz variables (.value)
+				pev->velocity = pev->velocity.Normalize() * oz_speedrpgair.value;
 			}
 		}
 	}
@@ -276,27 +320,7 @@ void CRpgRocket::FollowThink()
 			Detonate();
 		}
 	}
-
-	if (GetLauncher())
-	{
-		float flDistance = (pev->origin - GetLauncher()->pev->origin).Length();
-
-		// if we've travelled more than max distance the player can send a spot, stop tracking the original launcher (allow it to reload)
-		if (flDistance > 8192.0f || gpGlobals->time - m_flIgniteTime > 6.0f)
-		{
-			// ALERT(at_console, "RPG too far (%f)!\n", flDistance);
-			GetLauncher()->m_cActiveRockets--;
-			m_hLauncher = NULL;
-		}
-
-		//ALERT(at_console, "%.0f, m_pLauncher: %u, flDistance: %f\n", flSpeed, GetLauncher(), flDistance);
-	}
-
-	if ((UTIL_PointContents(pev->origin) == CONTENTS_SKY))
-	{
-		//ALERT( at_console, "Rocket is in the sky, detonating...\n");
-		Detonate();
-	}
+	// ALERT( at_console, "%.0f\n", flSpeed );
 
 	pev->nextthink = gpGlobals->time + 0.1;
 }
@@ -304,10 +328,9 @@ void CRpgRocket::FollowThink()
 
 
 
+// orig 0xfea50. Oz: reload_rpg's time, halved with the Haste Rune.
 void CRpg::Reload()
 {
-	//ALERT(at_console, "RPG Reload, m_cActiveRockets: %d, m_fSpotActive: %d\n", m_cActiveRockets, m_fSpotActive);
-
 	if (m_iClip == 1)
 	{
 		// don't bother with any of this if don't need to reload.
@@ -327,12 +350,10 @@ void CRpg::Reload()
 	// Set the next attack time into the future so that WeaponIdle will get called more often
 	// than reload, allowing the RPG LTD to be updated
 
-	m_flNextPrimaryAttack = GetNextAttackDelay(0.5);
+	m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.5;
 
 	if (0 != m_cActiveRockets && m_fSpotActive)
 	{
-		//ALERT(at_console, "RPG reload failed, m_cActiveRockets: %d, m_fSpotActive: %d\n", m_cActiveRockets, m_fSpotActive);
-
 		// no reloading when there are active missiles tracking the designator.
 		// ward off future autoreload attempts by setting next attack time into the future for a bit.
 		return;
@@ -346,17 +367,31 @@ void CRpg::Reload()
 	}
 #endif
 
+	// halflife-updated's fix, kept: the idle time is set only from this reload's result (c82c3fa,
+	// #42); the original reads an uninitialized result when the clip isn't empty, which with a
+	// one-rocket clip that isn't 1 can't happen.
 	if (m_iClip == 0)
 	{
-		const bool iResult = DefaultReload(RPG_MAX_CLIP, RPG_RELOAD, 2);
+		float flReloadTime = oz_reloadrpg.value;
+		if (m_pPlayer->m_iRune == 4) // Haste Rune
+			flReloadTime = oz_reloadrpg.value * 0.5;
+
+		const bool iResult = DefaultReload(RPG_MAX_CLIP, RPG_RELOAD, flReloadTime);
 
 		if (iResult)
 			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat(m_pPlayer->random_seed, 10, 15);
 	}
 }
 
+// orig 0xfeb80. Oz: disable_rpg removes it; give_with_rpg rockets in multiplayer.
 void CRpg::Spawn()
 {
+	if (oz_disablerpg.value > 0)
+	{
+		Kill();
+		return;
+	}
+
 	Precache();
 	m_iId = WEAPON_RPG;
 
@@ -370,7 +405,8 @@ void CRpg::Spawn()
 #endif
 	{
 		// more default ammo in multiplay.
-		m_iDefaultAmmo = RPG_DEFAULT_GIVE * 2;
+		// Oz variables (.value)
+		m_iDefaultAmmo = (int)oz_givewithrpg.value;
 	}
 	else
 	{
@@ -381,6 +417,7 @@ void CRpg::Spawn()
 }
 
 
+// orig 0xfec60
 void CRpg::Precache()
 {
 	PRECACHE_MODEL("models/w_rpg.mdl");
@@ -399,23 +436,38 @@ void CRpg::Precache()
 }
 
 
+// orig 0xfed20. Oz: max_rockets, weight_rpg. No ITEM_FLAG_NOAUTOSWITCHTO: halflife-updated's
+// (2353ca4, HL25) is a design change, so the original's 0 stays.
 bool CRpg::GetItemInfo(ItemInfo* p)
 {
 	p->pszName = STRING(pev->classname);
 	p->pszAmmo1 = "rockets";
-	p->iMaxAmmo1 = ROCKET_MAX_CARRY;
+	p->iMaxAmmo1 = (int)oz_maxrockets.value;
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = RPG_MAX_CLIP;
 	p->iSlot = 3;
 	p->iPosition = 0;
 	p->iId = m_iId = WEAPON_RPG;
-	p->iFlags = ITEM_FLAG_NOAUTOSWITCHTO;
-	p->iWeight = RPG_WEIGHT;
+	p->iFlags = 0;
+	p->iWeight = (int)oz_weightrpg.value; // Oz weight
 
 	return true;
 }
 
+// orig 0xfedf0. SDK 2.3's WeapPickup from AddToPlayer (design per mod-rc2's FIXES.md: which weapons
+// announce a pickup is the original's; halflife-updated sends it from CBasePlayer::AddPlayerItem).
+void CRpg::AddToPlayer(CBasePlayer* pPlayer)
+{
+	CBasePlayerWeapon::AddToPlayer(pPlayer);
+#ifndef CLIENT_DLL
+	MESSAGE_BEGIN(MSG_ONE, gmsgWeapPickup, NULL, pPlayer->pev);
+	WRITE_BYTE(m_iId);
+	MESSAGE_END();
+#endif
+}
+
+// orig 0xfee80
 bool CRpg::Deploy()
 {
 	if (m_iClip == 0)
@@ -427,6 +479,7 @@ bool CRpg::Deploy()
 }
 
 
+// orig 0xfeee0
 bool CRpg::CanHolster()
 {
 	if (m_fSpotActive && 0 != m_cActiveRockets)
@@ -438,6 +491,7 @@ bool CRpg::CanHolster()
 	return true;
 }
 
+// orig 0xfef10
 void CRpg::Holster()
 {
 	m_fInReload = false; // cancel any reload in progress.
@@ -457,6 +511,9 @@ void CRpg::Holster()
 
 
 
+// orig 0xfefa0. Oz: recoil_rpg kicks the view up; firing empty waits 0.5 s before the next
+// try (1.7's "Oz rocket empty repeat sound"). Not halflife-updated's ResetEmptySound here
+// (9b9d6c3, HL25) or its GetNextAttackDelay (seed): the original's timing, as in mod-rc2.
 void CRpg::PrimaryAttack()
 {
 	if (0 != m_iClip)
@@ -491,19 +548,23 @@ void CRpg::PrimaryAttack()
 
 		m_iClip--;
 
-		m_flNextPrimaryAttack = GetNextAttackDelay(1.5);
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.5;
 		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.5;
 
-		ResetEmptySound();
+		// Oz variables (.value)
+		m_pPlayer->pev->punchangle.x -= oz_recoilrpg.value;
 	}
 	else
 	{
+		// Oz rocket empty repeat sound
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.5;
 		PlayEmptySound();
 	}
 	UpdateSpot();
 }
 
 
+// orig 0xff2a0
 void CRpg::SecondaryAttack()
 {
 	m_fSpotActive = !m_fSpotActive;
@@ -520,9 +581,14 @@ void CRpg::SecondaryAttack()
 }
 
 
+// orig 0xff320. The original resets the empty sound on every idle call, not after the idle
+// animation (halflife-updated's c31c918 and 9b9d6c3 move it for client prediction, which OZ's
+// players don't run: Valve's client predicts the stock RPG).
 void CRpg::WeaponIdle()
 {
 	UpdateSpot();
+
+	ResetEmptySound();
 
 	if (m_flTimeWeaponIdle > UTIL_WeaponTimeBase())
 		return;
@@ -547,10 +613,11 @@ void CRpg::WeaponIdle()
 			else
 				iAnim = RPG_FIDGET;
 
+			// halflife-updated's fix, kept: the fidget animation's full length (33385ad,
+			// halflife#2495); the original waits 3 s and cuts it off
 			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 6.1;
 		}
 
-		ResetEmptySound();
 		SendWeaponAnim(iAnim);
 	}
 	else
@@ -561,10 +628,12 @@ void CRpg::WeaponIdle()
 
 
 
+// orig 0xff450
 void CRpg::UpdateSpot()
 {
 
 #ifndef CLIENT_DLL
+	// halflife-updated's fix, kept: no laser during a reload (9784339); the original has no check.
 	// Don't turn on the laser if we're in the middle of a reload.
 	if (m_fInReload)
 	{
@@ -590,6 +659,8 @@ void CRpg::UpdateSpot()
 #endif
 }
 
+// The original's inline CRpgAmmo methods: Spawn orig 0x140b20, Precache orig 0x140ae0, AddAmmo
+// orig 0x1409f0 (Oz: give_rpgclip rockets in multiplayer, max_rockets).
 class CRpgAmmo : public CBasePlayerAmmo
 {
 	void Spawn() override
@@ -614,14 +685,15 @@ class CRpgAmmo : public CBasePlayerAmmo
 #endif
 		{
 			// hand out more ammo per rocket in multiplayer.
-			iGive = AMMO_RPGCLIP_GIVE * 2;
+			// Oz variables (.value)
+			iGive = (int)oz_giverpgclip.value;
 		}
 		else
 		{
 			iGive = AMMO_RPGCLIP_GIVE;
 		}
 
-		if (pOther->GiveAmmo(iGive, "rockets", ROCKET_MAX_CARRY) != -1)
+		if (pOther->GiveAmmo(iGive, "rockets", (int)oz_maxrockets.value) != -1)
 		{
 			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
 			return true;
@@ -629,4 +701,4 @@ class CRpgAmmo : public CBasePlayerAmmo
 		return false;
 	}
 };
-LINK_ENTITY_TO_CLASS(ammo_rpgclip, CRpgAmmo);
+LINK_ENTITY_TO_CLASS(ammo_rpgclip, CRpgAmmo); // orig 0xff550

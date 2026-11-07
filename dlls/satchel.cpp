@@ -20,10 +20,10 @@
 #include "weapons.h"
 #include "player.h"
 #include "gamerules.h"
+#include "game.h"
 
-// If you want the "legacy" controls where primary attack is "throw first charge / detonate" and secondary attack is
-// "throw extra" charge, simply comment this define.
-#define MODERN_SATCHEL_CONTROLS
+// The original has SDK 2.3's controls: primary throws the first charge, then detonates; secondary
+// throws more. halflife-updated's MODERN_SATCHEL_CONTROLS (1c202f5, HL25) is a design change, left out.
 
 class CSatchelCharge : public CGrenade
 {
@@ -36,13 +36,16 @@ class CSatchelCharge : public CGrenade
 
 public:
 	void Deactivate();
+
+	float m_flArmTime; // Oz: when the proximity fuse arms (satchel_charge_time). orig +0x2ac, unsaved. VERIFY name
 };
-LINK_ENTITY_TO_CLASS(monster_satchel, CSatchelCharge);
+LINK_ENTITY_TO_CLASS(monster_satchel, CSatchelCharge); // orig 0xff5d0
 
 //=========================================================
 // Deactivate - do whatever it is we do to an orphaned
 // satchel when we don't want it in the world anymore.
 //=========================================================
+// orig 0xff5f0
 void CSatchelCharge::Deactivate()
 {
 	pev->solid = SOLID_NOT;
@@ -50,6 +53,7 @@ void CSatchelCharge::Deactivate()
 }
 
 
+// orig 0xff620. Oz: damage_satchel; the proximity fuse's arm time; a charge can be shot (1 health).
 void CSatchelCharge::Spawn()
 {
 	Precache();
@@ -67,15 +71,22 @@ void CSatchelCharge::Spawn()
 	SetThink(&CSatchelCharge::SatchelThink);
 	pev->nextthink = gpGlobals->time + 0.1;
 
+	// Oz variables (.value)
+	m_flArmTime = gpGlobals->time + oz_satchelchargetime.value;
+
 	pev->gravity = 0.5;
 	pev->friction = 0.8;
 
-	pev->dmg = gSkillData.plrDmgSatchel;
+	pev->dmg = oz_damagesatchel.value; // Oz variables (.value)
 	// ResetSequenceInfo( );
 	pev->sequence = 1;
+
+	pev->takedamage = DAMAGE_YES;
+	pev->health = 1;
 }
 
 
+// orig 0xff780
 void CSatchelCharge::SatchelSlide(CBaseEntity* pOther)
 {
 	entvars_t* pevOther = pOther->pev;
@@ -106,8 +117,13 @@ void CSatchelCharge::SatchelSlide(CBaseEntity* pOther)
 }
 
 
+// orig 0xff8e0. Oz: with allow_proximity_satchel 1, an armed charge blows when the first entity
+// UTIL_FindEntityInSphere returns within satchel_detection_area is a player (only that one is
+// tested, the charge's owner included). Every think also sets dmgtime 5 s ahead.
 void CSatchelCharge::SatchelThink()
 {
+	pev->dmgtime = gpGlobals->time + 5; // VERIFY: nothing in the package reads it for a satchel
+
 	StudioFrameAdvance();
 	pev->nextthink = gpGlobals->time + 0.1;
 
@@ -132,8 +148,19 @@ void CSatchelCharge::SatchelThink()
 	{
 		pev->velocity.z -= 8;
 	}
+
+	// Oz proximity satchel
+	// Oz variables (.value)
+	CBaseEntity* pEntity;
+	if (m_flArmTime <= gpGlobals->time && oz_allowproximity.value == 1 &&
+		(pEntity = UTIL_FindEntityInSphere(NULL, pev->origin, oz_satchelareadetect.value)) != NULL &&
+		pEntity->IsPlayer())
+	{
+		SetThink(&CSatchelCharge::Detonate);
+	}
 }
 
+// orig 0xffab0
 void CSatchelCharge::Precache()
 {
 	PRECACHE_MODEL("models/grenade.mdl");
@@ -142,6 +169,7 @@ void CSatchelCharge::Precache()
 	PRECACHE_SOUND("weapons/g_bounce3.wav");
 }
 
+// orig 0xffb10
 void CSatchelCharge::BounceSound()
 {
 	switch (RANDOM_LONG(0, 2))
@@ -159,72 +187,54 @@ void CSatchelCharge::BounceSound()
 }
 
 
-LINK_ENTITY_TO_CLASS(weapon_satchel, CSatchel);
+LINK_ENTITY_TO_CLASS(weapon_satchel, CSatchel); // orig 0xffbb0
 
 
 //=========================================================
 // CALLED THROUGH the newly-touched weapon's instance. The existing player weapon is pOriginal
 //=========================================================
+// orig 0xffbd0. Oz: SDK 2.3's refusal while charges are out is gone (its multiplayer test is
+// left with nothing in it), and so is halflife-updated's live charge limit (fd97136, HL25: design).
 bool CSatchel::AddDuplicate(CBasePlayerItem* pOriginal)
 {
-	CSatchel* pSatchel = nullptr;
-
-#ifdef CLIENT_DLL
-	if (bIsMultiplayer())
-#else
-	if (g_pGameRules->IsMultiplayer())
+#ifndef CLIENT_DLL
+	g_pGameRules->IsMultiplayer();
 #endif
-	{
-		pSatchel = (CSatchel*)pOriginal;
-
-		if (pOriginal->m_pPlayer == NULL)
-			return true;
-
-		int nSatchelsInPocket = pSatchel->m_pPlayer->m_rgAmmo[pSatchel->PrimaryAmmoIndex()];
-		int nNumSatchels = 0;
-		CBaseEntity* pLiveSatchel = NULL;
-
-		while ((pLiveSatchel = UTIL_FindEntityInSphere(pLiveSatchel, pOriginal->m_pPlayer->pev->origin, 4096)) != NULL)
-		{
-			if (FClassnameIs(pLiveSatchel->pev, "monster_satchel"))
-			{
-				if (pLiveSatchel->pev->owner == pOriginal->m_pPlayer->edict())
-				{
-					nNumSatchels++;
-				}
-			}
-		}
-
-		if (pSatchel->m_chargeReady != 0 && (nSatchelsInPocket + nNumSatchels) >= SATCHEL_MAX_CARRY)
-		{
-			// player has some satchels deployed. Refuse to add more.
-			return false;
-		}
-	}
 
 	return CBasePlayerWeapon::AddDuplicate(pOriginal);
 }
 
 //=========================================================
 //=========================================================
+// orig 0xffc10. SDK 2.3's without its m_chargeReady = 0: a satchel weapon picked up keeps its
+// radio state (Oz). The original goes through CBasePlayerItem::AddToPlayer, sets the weapon bit and
+// calls AddWeapon (ExtractAmmo); here CBasePlayerWeapon::AddToPlayer sets the bit (and the ammo
+// indices) and CBasePlayer::AddPlayerItem extracts the ammo after it (halflife-updated's flow).
 void CSatchel::AddToPlayer(CBasePlayer* pPlayer)
 {
-	m_chargeReady = 0; // this satchel charge weapon now forgets that any satchels are deployed by it.
 	CBasePlayerWeapon::AddToPlayer(pPlayer);
 }
 
+// orig 0xffc80. Oz: disable_satchel removes it; give_with_satchel charges.
 void CSatchel::Spawn()
 {
+	if (oz_disablesatchel.value > 0)
+	{
+		Kill();
+		return;
+	}
+
 	Precache();
 	m_iId = WEAPON_SATCHEL;
 	SET_MODEL(ENT(pev), "models/w_satchel.mdl");
 
-	m_iDefaultAmmo = SATCHEL_DEFAULT_GIVE;
+	m_iDefaultAmmo = (int)oz_givewithsatchel.value; // Oz variables (.value)
 
 	FallInit(); // get ready to fall down.
 }
 
 
+// orig 0xffd20
 void CSatchel::Precache()
 {
 	PRECACHE_MODEL("models/v_satchel.mdl");
@@ -237,11 +247,12 @@ void CSatchel::Precache()
 }
 
 
+// orig 0xffda0. Oz: max_satchels, weight_satchel.
 bool CSatchel::GetItemInfo(ItemInfo* p)
 {
 	p->pszName = STRING(pev->classname);
 	p->pszAmmo1 = "Satchel Charge";
-	p->iMaxAmmo1 = SATCHEL_MAX_CARRY;
+	p->iMaxAmmo1 = (int)oz_maxsatchels.value;
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
@@ -249,13 +260,14 @@ bool CSatchel::GetItemInfo(ItemInfo* p)
 	p->iPosition = 1;
 	p->iFlags = ITEM_FLAG_SELECTONEMPTY | ITEM_FLAG_LIMITINWORLD | ITEM_FLAG_EXHAUSTIBLE;
 	p->iId = m_iId = WEAPON_SATCHEL;
-	p->iWeight = SATCHEL_WEIGHT;
+	p->iWeight = (int)oz_weightsatchel.value; // Oz weight
 
 	return true;
 }
 
 //=========================================================
 //=========================================================
+// orig 0xffe70
 bool CSatchel::IsUseable()
 {
 	if (m_pPlayer->m_rgAmmo[PrimaryAmmoIndex()] > 0)
@@ -273,6 +285,7 @@ bool CSatchel::IsUseable()
 	return false;
 }
 
+// orig 0xffec0
 bool CSatchel::CanDeploy()
 {
 	if (m_pPlayer->m_rgAmmo[PrimaryAmmoIndex()] > 0)
@@ -290,6 +303,9 @@ bool CSatchel::CanDeploy()
 	return false;
 }
 
+// orig 0xfff10. halflife-updated's fix, kept: the idle time is set after DefaultDeploy, which sets
+// its own 1 s (33385ad, halflife#2495); the original sets 10-15 s before it, so the draw animation
+// is cut after 1 s.
 bool CSatchel::Deploy()
 {
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 1.0;
@@ -311,6 +327,7 @@ bool CSatchel::Deploy()
 }
 
 
+// orig 0xfffd0
 void CSatchel::Holster()
 {
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
@@ -335,15 +352,9 @@ void CSatchel::Holster()
 
 
 
+// orig 0x1000d0. SDK 2.3's: the first charge, then the detonator.
 void CSatchel::PrimaryAttack()
 {
-#ifdef MODERN_SATCHEL_CONTROLS
-	// we're reloading, don't allow fire
-	if (m_chargeReady != 2)
-	{
-		Throw();
-	}
-#else
 	switch (m_chargeReady)
 	{
 	case 0:
@@ -353,7 +364,28 @@ void CSatchel::PrimaryAttack()
 	break;
 	case 1:
 	{
-		Detonate();
+		SendWeaponAnim(SATCHEL_RADIO_FIRE);
+
+		edict_t* pPlayer = m_pPlayer->edict();
+
+		CBaseEntity* pSatchel = NULL;
+
+		while ((pSatchel = UTIL_FindEntityInSphere(pSatchel, m_pPlayer->pev->origin, 4096)) != NULL)
+		{
+			if (FClassnameIs(pSatchel->pev, "monster_satchel"))
+			{
+				if (pSatchel->pev->owner == pPlayer)
+				{
+					pSatchel->Use(m_pPlayer, m_pPlayer, USE_ON, 0);
+					m_chargeReady = 2;
+				}
+			}
+		}
+
+		m_chargeReady = 2;
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.5;
+		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.5;
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 0.5;
 		break;
 	}
 
@@ -363,33 +395,28 @@ void CSatchel::PrimaryAttack()
 		}
 		break;
 	}
-#endif
 }
 
 
+// orig 0x100230
 void CSatchel::SecondaryAttack()
 {
-#ifdef MODERN_SATCHEL_CONTROLS
-	if (m_chargeReady == 1)
-	{
-		Detonate();
-	}
-#else
 	if (m_chargeReady != 2)
 	{
 		Throw();
 	}
-#endif
 }
 
 
+// orig 0x100260. Oz: speed_satchel's throw.
 void CSatchel::Throw()
 {
 	if (0 != m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType])
 	{
 		Vector vecSrc = m_pPlayer->pev->origin;
 
-		Vector vecThrow = gpGlobals->v_forward * 274 + m_pPlayer->pev->velocity;
+		// Oz variables (.value)
+		Vector vecThrow = gpGlobals->v_forward * oz_speedsatchel.value + m_pPlayer->pev->velocity;
 
 #ifndef CLIENT_DLL
 		CBaseEntity* pSatchel = Create("monster_satchel", vecSrc, Vector(0, 0, 0), m_pPlayer->edict());
@@ -411,39 +438,13 @@ void CSatchel::Throw()
 
 		m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]--;
 
-		m_flNextPrimaryAttack = GetNextAttackDelay(1.0);
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.0;
 		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.5;
 	}
 }
 
 
-void CSatchel::Detonate()
-{
-	SendWeaponAnim(SATCHEL_RADIO_FIRE);
-
-	edict_t* pPlayer = m_pPlayer->edict();
-
-	CBaseEntity* pSatchel = NULL;
-
-	while ((pSatchel = UTIL_FindEntityInSphere(pSatchel, m_pPlayer->pev->origin, 4096)) != NULL)
-	{
-		if (FClassnameIs(pSatchel->pev, "monster_satchel"))
-		{
-			if (pSatchel->pev->owner == pPlayer)
-			{
-				pSatchel->Use(m_pPlayer, m_pPlayer, USE_ON, 0);
-				m_chargeReady = 2;
-			}
-		}
-	}
-
-	m_chargeReady = 2;
-	m_flNextPrimaryAttack = GetNextAttackDelay(0.5);
-	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.5;
-	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 0.5;
-}
-
-
+// orig 0x100420
 void CSatchel::WeaponIdle()
 {
 	if (m_flTimeWeaponIdle > UTIL_WeaponTimeBase())
@@ -481,7 +482,7 @@ void CSatchel::WeaponIdle()
 		// use tripmine animations
 		strcpy(m_pPlayer->m_szAnimExtention, "trip");
 
-		m_flNextPrimaryAttack = GetNextAttackDelay(0.5);
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.5;
 		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.5;
 		m_chargeReady = 0;
 		break;
@@ -495,6 +496,7 @@ void CSatchel::WeaponIdle()
 //
 // Made this global on purpose.
 //=========================================================
+// orig 0x100630
 void DeactivateSatchels(CBasePlayer* pOwner)
 {
 	edict_t* pFind;
