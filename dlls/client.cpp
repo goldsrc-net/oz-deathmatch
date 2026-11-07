@@ -47,8 +47,29 @@
 #include "pm_shared.h"
 #include "pm_defs.h"
 #include "UserMessages.h"
+#include "nodes.h"
+#include "items.h"
+#include "grapple.h"
 
 DLL_GLOBAL unsigned int g_ulFrameCount;
+
+// Oz: functions and globals of other OZ files
+extern int UseBotCycle(int iBots);		   // orig 0x88310 (bot_misc.cpp)
+extern void BotConnect(int iBots);		   // orig 0x88990 (bot_misc.cpp)
+extern int bInitBotCycle;				   // orig 0x19c518 (bot globals)
+extern float TimeNextPossibleBotConnect; // orig 0x19c514 (bot globals)
+
+// Oz: the info_player_deathmatch count ServerActivate takes; the runes read it (items.cpp).
+// orig 0x19c51c (bss beside the bot globals; its file in the original is not known, ServerActivate counts it)
+int NumPlayerStarts;
+
+// TEMP DECL (rules): real one belongs in bot_misc.cpp's header
+class CBaseBotGlobals
+{
+public:
+	void HandleAutoAdjDifficulty(); // orig 0x88050
+};
+extern CBaseBotGlobals BotGlobals; // orig 0x19c3c0
 
 extern void CopyToBodyQue(entvars_t* pev);
 
@@ -58,6 +79,7 @@ void LinkUserMessages();
  * used by kill command and disconnect command
  * ROBIN: Moved here from player.cpp, to allow multiple player models
  */
+// orig 0x95020
 void set_suicide_frame(entvars_t* pev)
 {
 	if (!FStrEq(STRING(pev->model), "models/player.mdl"))
@@ -78,6 +100,7 @@ ClientConnect
 called when a player connects to a server
 ============
 */
+// orig 0x95090
 qboolean ClientConnect(edict_t* pEntity, const char* pszName, const char* pszAddress, char szRejectReason[128])
 {
 	return static_cast<qboolean>(g_pGameRules->ClientConnected(pEntity, pszName, pszAddress, szRejectReason));
@@ -97,11 +120,39 @@ called when a player disconnects from a server
 GLOBALS ASSUMED SET:  g_fGameOver
 ============
 */
+// orig 0x950d0. OZ: frees a bot's private data first (so the GetClassPtr below makes a blank player),
+// lets go of the grappling hook and drops the rune, and clears FL_CLIENT/FL_FAKECLIENT.
 void ClientDisconnect(edict_t* pEntity)
 {
+	// Oz: RhoBot
+	if ((pEntity->v.flags & FL_FAKECLIENT) != 0)
+		FREE_PRIVATE(pEntity);
+
 	if (g_fGameOver)
 		return;
 
+	entvars_t* pev = &pEntity->v;
+	CBasePlayer* pPlayer = GetClassPtr((CBasePlayer*)pev);
+
+	// Oz grapple
+	if (pPlayer->pGrappleBolt)
+	{
+		if (pPlayer->IsHanging)
+		{
+			pPlayer->IsHanging = false;
+			pPlayer->m_afPhysicsFlags &= ~PFLAG_ONTRAIN;
+		}
+		pev->movetype = MOVETYPE_WALK;
+		pev->gravity = 1;
+		pPlayer->pGrappleBolt->Killed(NULL, 0);
+		pPlayer->pGrappleBolt = NULL;
+	}
+
+	// Oz runes - disconnect spawn
+	if (pPlayer->m_iRune != 0)
+		pPlayer->RemoveRune();
+
+	// halflife-updated's fix, kept: no "- %s has left" text for a client that never got a name
 	char text[256] = "";
 	if (!FStringNull(pEntity->v.netname))
 		snprintf(text, sizeof(text), "- %s has left the game\n", STRING(pEntity->v.netname));
@@ -121,20 +172,19 @@ void ClientDisconnect(edict_t* pEntity)
 		}
 	}
 
+	// Oz
+	GetClassPtr((CBasePlayer*)pev)->pev->flags &= ~(FL_FAKECLIENT | FL_CLIENT);
+
 	// since the edict doesn't get deleted, fix it so it doesn't interfere.
 	pEntity->v.takedamage = DAMAGE_NO; // don't attract autoaim
 	pEntity->v.solid = SOLID_NOT;	   // nonsolid
 	UTIL_SetOrigin(&pEntity->v, pEntity->v.origin);
 
-	auto pPlayer = reinterpret_cast<CBasePlayer*>(GET_PRIVATE(pEntity));
-
-	if (pPlayer)
+	// halflife-updated's fix, kept: stop controlling a func_tank (de2751c, halflife#2594)
+	if (pPlayer->m_pTank != NULL)
 	{
-		if (pPlayer->m_pTank != NULL)
-		{
-			pPlayer->m_pTank->Use(pPlayer, pPlayer, USE_OFF, 0);
-			pPlayer->m_pTank = NULL;
-		}
+		pPlayer->m_pTank->Use(pPlayer, pPlayer, USE_OFF, 0);
+		pPlayer->m_pTank = NULL;
 	}
 
 	g_pGameRules->ClientDisconnected(pEntity);
@@ -142,11 +192,13 @@ void ClientDisconnect(edict_t* pEntity)
 
 
 // called by ClientKill and DeadThink
+// orig 0x952e0
 void respawn(entvars_t* pev, bool fCopyCorpse)
 {
 	if (0 != gpGlobals->coop || 0 != gpGlobals->deathmatch)
 	{
-		if (fCopyCorpse)
+		// Oz observer mode
+		if (fCopyCorpse && pev->movetype != MOVETYPE_NOCLIP)
 		{
 			// make a copy of the dead body for appearances sake
 			CopyToBodyQue(pev);
@@ -170,16 +222,28 @@ Player entered the suicide command
 GLOBALS ASSUMED SET:  g_ulModelIndexPlayer
 ============
 */
+// orig 0x95370. OZ: no kill at 0 health or in observer mode; the booby trap rune remembers a suicide.
 void ClientKill(edict_t* pEntity)
 {
 	entvars_t* pev = &pEntity->v;
 
 	CBasePlayer* pl = (CBasePlayer*)CBasePlayer::Instance(pev);
 
+	if (pl->pev->health == 0)
+		return;
+
+	// Oz observer mode
+	if (pl->pev->flags == FL_SPECTATOR)
+		return;
+
 	if (pl->m_fNextSuicideTime > gpGlobals->time)
 		return; // prevent suiciding too ofter
 
 	pl->m_fNextSuicideTime = gpGlobals->time + 1; // don't let them suicide for 5 seconds after suiciding
+
+	//jam : Oz runes booby trap rune
+	if (pl->m_iRune == RUNE_TRAP) // Booby Trap Rune
+		pl->wassuicide = 1;
 
 	// have the player kill themself
 	pev->health = 0;
@@ -197,6 +261,7 @@ ClientPutInServer
 called each time a player is spawned
 ============
 */
+// orig 0x95440. No iuser1/iuser2 reset: that is Valve's 2013 spectator code (same call as mod-rockcrowbar).
 void ClientPutInServer(edict_t* pEntity)
 {
 	CBasePlayer* pPlayer;
@@ -211,9 +276,6 @@ void ClientPutInServer(edict_t* pEntity)
 
 	// Reset interpolation during first frame
 	pPlayer->pev->effects |= EF_NOINTERP;
-
-	pPlayer->pev->iuser1 = 0; // disable any spec modes
-	pPlayer->pev->iuser2 = 0;
 }
 
 #include "voice_gamemgr.h"
@@ -340,6 +402,10 @@ bool Q_UnicodeValidate(const char* pUTF8)
 // or as
 // blah blah blah
 //
+// orig 0x95490. SDK 2.3's, with OZ's logchat: the line goes to the log only when logchat is 0, else to the
+// server console only. Valve's 2013 additions are left out as features (the chat flood timer, "(SPEC)" chat,
+// the voice-mute check, as mod-rockcrowbar); its UTF-8 check is kept as a fix (the isprint test it replaced
+// dropped any text that was all non-ASCII).
 void Host_Say(edict_t* pEntity, bool teamonly)
 {
 	CBasePlayer* client;
@@ -353,13 +419,6 @@ void Host_Say(edict_t* pEntity, bool teamonly)
 
 	// We can get a raw string now, without the "say " prepended
 	if (CMD_ARGC() == 0)
-		return;
-
-	entvars_t* pev = &pEntity->v;
-	CBasePlayer* player = GetClassPtr((CBasePlayer*)pev);
-
-	//Not yet.
-	if (player->m_flNextChatTime > gpGlobals->time)
 		return;
 
 	if (!stricmp(pcmd, cpSay) || !stricmp(pcmd, cpSayTeam))
@@ -396,15 +455,12 @@ void Host_Say(edict_t* pEntity, bool teamonly)
 	}
 
 	// make sure the text has content
-
+	// halflife-updated's fix, kept: Q_UnicodeValidate for the isprint/isspace loop
 	if (!p || '\0' == p[0] || !Q_UnicodeValidate(p))
 		return; // no character found, so say nothing
 
 	// turn on color set 2  (color on,  no sound)
-	// turn on color set 2  (color on,  no sound)
-	if (player->IsObserver() && (teamonly))
-		sprintf(text, "%c(SPEC) %s: ", 2, STRING(pEntity->v.netname));
-	else if (teamonly)
+	if (teamonly)
 		sprintf(text, "%c(TEAM) %s: ", 2, STRING(pEntity->v.netname));
 	else
 		sprintf(text, "%c%s: ", 2, STRING(pEntity->v.netname));
@@ -415,9 +471,6 @@ void Host_Say(edict_t* pEntity, bool teamonly)
 
 	strcat(text, p);
 	strcat(text, "\n");
-
-
-	player->m_flNextChatTime = gpGlobals->time + CHAT_INTERVAL;
 
 	// loop through all players
 	// Start with the first player.
@@ -436,17 +489,8 @@ void Host_Say(edict_t* pEntity, bool teamonly)
 		if (!(client->IsNetClient())) // Not a client ? (should never be true)
 			continue;
 
-		// can the receiver hear the sender? or has he muted him?
-		if (g_VoiceGameMgr.PlayerHasBlockedPlayer(client, player))
+		if (teamonly && g_pGameRules->PlayerRelationship(client, CBaseEntity::Instance(pEntity)) != GR_TEAMMATE)
 			continue;
-
-		if (!player->IsObserver() && teamonly && g_pGameRules->PlayerRelationship(client, CBaseEntity::Instance(pEntity)) != GR_TEAMMATE)
-			continue;
-
-		// Spectators can only talk to other specs
-		if (player->IsObserver() && teamonly)
-			if (!client->IsObserver())
-				continue;
 
 		MESSAGE_BEGIN(MSG_ONE, gmsgSayText, NULL, client->pev);
 		WRITE_BYTE(ENTINDEX(pEntity));
@@ -460,35 +504,41 @@ void Host_Say(edict_t* pEntity, bool teamonly)
 	WRITE_STRING(text);
 	MESSAGE_END();
 
-	// echo to server console
-	g_engfuncs.pfnServerPrint(text);
-
-	const char* temp;
-	if (teamonly)
-		temp = "say_team";
-	else
-		temp = "say";
-
-	// team match?
-	if (g_teamplay)
+	// Oz: logchat
+	if (oz_logchat.value == 0)
 	{
-		UTIL_LogPrintf("\"%s<%i><%s><%s>\" %s \"%s\"\n",
-			STRING(pEntity->v.netname),
-			GETPLAYERUSERID(pEntity),
-			GETPLAYERAUTHID(pEntity),
-			g_engfuncs.pfnInfoKeyValue(g_engfuncs.pfnGetInfoKeyBuffer(pEntity), "model"),
-			temp,
-			p);
+		const char* temp;
+		if (teamonly)
+			temp = "say_team";
+		else
+			temp = "say";
+
+		// team match?
+		if (g_teamplay)
+		{
+			UTIL_LogPrintf("\"%s<%i><%s><%s>\" %s \"%s\"\n",
+				STRING(pEntity->v.netname),
+				GETPLAYERUSERID(pEntity),
+				GETPLAYERAUTHID(pEntity),
+				g_engfuncs.pfnInfoKeyValue(g_engfuncs.pfnGetInfoKeyBuffer(pEntity), "model"),
+				temp,
+				p);
+		}
+		else
+		{
+			UTIL_LogPrintf("\"%s<%i><%s><%i>\" %s \"%s\"\n",
+				STRING(pEntity->v.netname),
+				GETPLAYERUSERID(pEntity),
+				GETPLAYERAUTHID(pEntity),
+				GETPLAYERUSERID(pEntity),
+				temp,
+				p);
+		}
 	}
 	else
 	{
-		UTIL_LogPrintf("\"%s<%i><%s><%i>\" %s \"%s\"\n",
-			STRING(pEntity->v.netname),
-			GETPLAYERUSERID(pEntity),
-			GETPLAYERAUTHID(pEntity),
-			GETPLAYERUSERID(pEntity),
-			temp,
-			p);
+		// echo to server console
+		g_engfuncs.pfnServerPrint(text);
 	}
 }
 
@@ -500,6 +550,10 @@ called each time a player uses a "cmd" command
 ============
 */
 // Use CMD_ARGV,  CMD_ARGV, and CMD_ARGC to get pointers the character string command.
+// orig 0x959e0. OZ's command set (the bot commands, runes, grapple, help screens, server messages).
+// Only net clients run commands. Not in the original, and left out: Valve's 2013 "spectate", "specmode"
+// and "follownext" (OZ has its own observer mode). Kept from halflife-updated: "fullupdate" and
+// "closemenus" (sent by today's client) and the % filter on "Unknown command", as mod-rockcrowbar.
 void ClientCommand(edict_t* pEntity)
 {
 	const char* pcmd = CMD_ARGV(0);
@@ -512,6 +566,10 @@ void ClientCommand(edict_t* pEntity)
 	entvars_t* pev = &pEntity->v;
 
 	auto player = GetClassPtr<CBasePlayer>(reinterpret_cast<CBasePlayer*>(&pEntity->v));
+
+	// Oz: bots don't run client commands
+	if (!player->IsNetClient())
+		return;
 
 	if (FStrEq(pcmd, "say"))
 	{
@@ -527,6 +585,7 @@ void ClientCommand(edict_t* pEntity)
 	}
 	else if (FStrEq(pcmd, "give"))
 	{
+		// halflife-updated's fix, kept: sv_cheats read on demand (04f8b91, halflife#2511), not g_flWeaponCheat
 		if (0 != g_psv_cheats->value)
 		{
 			int iszItem = ALLOC_STRING(CMD_ARGV(1)); // Make a copy of the classname
@@ -562,34 +621,347 @@ void ClientCommand(edict_t* pEntity)
 	{
 		player->SelectLastItem();
 	}
-	else if (FStrEq(pcmd, "spectate")) // clients wants to become a spectator
+	// Oz cheat detection: a client without the cheat bounces these back here (CBasePlayer::DetectCheats)
+	else if (FStrEq(pcmd, "bot_fov"))
 	{
-		// always allow proxies to become a spectator
-		if ((pev->flags & FL_PROXY) != 0 || 0 != allow_spectators.value)
+		player->m_iBotFovCheck = 0;
+	}
+	else if (FStrEq(pcmd, "enable_wallhack"))
+	{
+		player->m_iWallhackCheck = 0;
+	}
+	// Oz: RhoBot, listen server only
+	else if (FStrEq(pcmd, "addbot"))
+	{
+		if (IS_DEDICATED_SERVER())
 		{
-			edict_t* pentSpawnSpot = g_pGameRules->GetPlayerSpawnSpot(player);
-			player->StartObserver(pev->origin, VARS(pentSpawnSpot)->angles);
+			CLIENT_PRINTF(pEntity, print_console, "addbot not allowed from client!\n");
+			return;
+		}
 
-			// notify other clients of player switching to spectator mode
-			UTIL_ClientPrintAll(HUD_PRINTNOTIFY, UTIL_VarArgs("%s switched to spectator mode\n",
-													 (!FStringNull(pev->netname) && STRING(pev->netname)[0] != 0) ? STRING(pev->netname) : "unconnected"));
+		int iPlayers = 0;
+		for (int i = 1; i <= gpGlobals->maxClients; i++)
+		{
+			CBaseEntity* pPlayer = UTIL_PlayerByIndex(i);
+			if (pPlayer && pPlayer->IsPlayer())
+				iPlayers++;
+		}
+
+		if (iPlayers > 31)
+		{
+			UTIL_ClientPrintAll(HUD_PRINTNOTIFY, "Rho-Bot supports a maximum of 32 players.\n");
+			return;
+		}
+
+		char cmd[128] = "bot_number ###";
+		sprintf(cmd, "bot_number %d\n", (int)bot_number.value + 1);
+		SERVER_COMMAND(cmd);
+		if (IS_DEDICATED_SERVER())
+			printf("%s", cmd);
+	}
+	else if (FStrEq(pcmd, "removebots"))
+	{
+		if (IS_DEDICATED_SERVER())
+		{
+			CLIENT_PRINTF(pEntity, print_console, "removebots not allowed from client!\n");
+			return;
+		}
+
+		char cmd[128] = "bot_number ###";
+		sprintf(cmd, "bot_number %d\n", 0);
+		SERVER_COMMAND(cmd);
+		if (IS_DEDICATED_SERVER())
+			printf("%s", cmd);
+	}
+	else if (FStrEq(pcmd, "removebot"))
+	{
+		if (IS_DEDICATED_SERVER())
+		{
+			CLIENT_PRINTF(pEntity, print_console, "removebot not allowed from client!\n");
+			return;
+		}
+
+		// Any entity with that netname, bot or not (the original's lookup)
+		CBaseEntity* pBot = UTIL_FindEntityByString(NULL, "netname", CMD_ARGV(1));
+		if (!pBot)
+		{
+			char msg[128] = "kick Some Bot\n";
+			sprintf(msg, "could not kick \"%s\"\n", CMD_ARGV(1));
+			CLIENT_PRINTF(pEntity, print_console, msg);
+			return;
+		}
+
+		pBot->pev->flags &= ~(FL_FAKECLIENT | FL_CLIENT);
+		pBot->pev->health = 0;
+
+		char kick[128] = "kick Some Bot\n";
+		sprintf(kick, "kick \"%s\"\n", STRING(pBot->pev->netname));
+		CLIENT_COMMAND(pEntity, kick); // the listen server's host runs the kick
+
+		char cmd[128] = "bot_number ###";
+		sprintf(cmd, "bot_number %d\n", (int)bot_number.value - 1);
+		SERVER_COMMAND(cmd);
+		if (IS_DEDICATED_SERVER())
+			printf("%s", cmd);
+	}
+	// Oz runes
+	else if (FStrEq(pcmd, "userune"))
+	{
+		CBasePlayer* pPlayer = GetClassPtr((CBasePlayer*)pev);
+
+		if (pPlayer->m_iRune == RUNE_TRAP) // Booby Trap Rune: self destruct
+		{
+			CBasePlayer* pSelf = GetClassPtr((CBasePlayer*)pev);
+			pSelf->TakeDamage(VARS(INDEXENT(0)), VARS(INDEXENT(0)), 1000, DMG_GENERIC);
+		}
+
+		if (pPlayer->m_iRune == RUNE_TELEPORT) // Teleport Rune
+			GetClassPtr((CBasePlayer*)pev)->Teleport();
+	}
+	// Oz info
+	else if (FStrEq(pcmd, "showtime") || FStrEq(pcmd, "showmapname") || FStrEq(pcmd, "info") || FStrEq(pcmd, "timeleft"))
+	{
+		CBasePlayer* pPlayer = GetClassPtr((CBasePlayer*)pev);
+		char szText[201];
+		hudtextparms_t hText;
+
+		const int iTimeLimit = (int)CVAR_GET_FLOAT("mp_timelimit");
+		const int iFragLimit = (int)CVAR_GET_FLOAT("mp_fraglimit");
+		const int iTimeLeft = (int)((float)((int)CVAR_GET_FLOAT("mp_timelimit") * 60) - gpGlobals->time);
+
+		sprintf(szText, "Current Map: %s\nTime Limit: %02d\nFrag Limit: %02d\nEstimated Time Remaining: %02d:%02d\n",
+			STRING(gpGlobals->mapname), iTimeLimit, iFragLimit, iTimeLeft / 60, iTimeLeft % 60);
+
+		memset(&hText, 0, sizeof(hText));
+		hText.channel = 4;
+		hText.x = 0.01;
+		hText.y = 0.6;
+		hText.effect = 0;
+		hText.r1 = hText.g1 = hText.b1 = 255;
+		hText.a1 = 255;
+		hText.r2 = hText.g2 = hText.b2 = 255;
+		hText.a2 = 255;
+		hText.fadeinTime = 0;
+		hText.fadeoutTime = 0;
+		hText.holdTime = 5;
+		hText.fxTime = 0.5;
+		UTIL_HudMessage(pPlayer, hText, szText);
+	}
+	else if (FStrEq(pcmd, "help"))
+	{
+		CBasePlayer* pPlayer = GetClassPtr((CBasePlayer*)pev);
+		char szText[201];
+		hudtextparms_t hText;
+
+		ClientPrint(pev, HUD_PRINTCONSOLE, "OZ CONSOLE COMMANDS:\n\nhelp - display this message\ninfo - display current map name and time\n");
+		ClientPrint(pev, HUD_PRINTCONSOLE, "+hook - aim and hold for grappling hook\n");
+		ClientPrint(pev, HUD_PRINTCONSOLE, "droprune - drops your current rune so you may get another\n");
+		ClientPrint(pev, HUD_PRINTCONSOLE, "userune - teleport or self destruct\n");
+		ClientPrint(pev, HUD_PRINTCONSOLE, "+voicerecord - hold key down to enable microphone\n \nEXAMPLE:\nbind x +hook\n");
+		ClientPrint(pev, HUD_PRINTCONSOLE, " \n  -= type: more and hit enter for more options =-\n");
+
+		sprintf(szText, "CONSOLE COMMANDS:\n\ninfo\n+hook\ndroprune\nuserune\n\nEXAMPLE:\n bind x +hook\n");
+
+		memset(&hText, 0, sizeof(hText));
+		hText.channel = 4;
+		hText.x = 0.01;
+		hText.y = 0.5;
+		hText.effect = 0;
+		hText.r1 = 0;
+		hText.g1 = 255;
+		hText.b1 = 0;
+		hText.a1 = 255;
+		hText.r2 = 0;
+		hText.g2 = 255;
+		hText.b2 = 0;
+		hText.a2 = 255;
+		hText.fadeinTime = 1;
+		hText.fadeoutTime = 3;
+		hText.holdTime = 60;
+		hText.fxTime = 0.5;
+		UTIL_HudMessage(pPlayer, hText, szText);
+	}
+	else if (FStrEq(pcmd, "more"))
+	{
+		GetClassPtr((CBasePlayer*)pev);
+		ClientPrint(pev, HUD_PRINTCONSOLE, "     -=  ADVANCED OPTIONS  =-\n \nThese are NOT bound to keys\n \ntype directly in console followed by enter\n \n");
+		ClientPrint(pev, HUD_PRINTCONSOLE, "voice_enable 1 - enables voicemode\nvoice_forcemicrecord 1.000 - sets microphone enabled\nvoice_scale 1.5 - sets voice volume\n");
+		ClientPrint(pev, HUD_PRINTCONSOLE, "voice_overdrive 0 - mutes game audio when others talk\nfps_modem 90 - sets max fps to 90\nnet_graph 3 - compact network monitor\n");
+		ClientPrint(pev, HUD_PRINTCONSOLE, " \n \n type: cam and hit enter for Oz spectator options\n");
+	}
+	else if (FStrEq(pcmd, "cam"))
+	{
+		GetClassPtr((CBasePlayer*)pev);
+		ClientPrint(pev, HUD_PRINTCONSOLE, "     -=  OZ SPECTATOR OPTIONS  =- \n");
+		ClientPrint(pev, HUD_PRINTCONSOLE, " \nThen use your jump button to toggle camera views\nYour secondary fire button to watch other players\n");
+		ClientPrint(pev, HUD_PRINTCONSOLE, "And your normal fire button to escape back to the game\n\n");
+	}
+	// Oz grapple
+	else if (FStrEq(pcmd, "+hook"))
+	{
+		if (pev->deadflag != DEAD_NO)
+			return;
+
+		if (pev->movetype == MOVETYPE_NOCLIP)
+			return;
+
+		if (oz_grappledisable.value > 0)
+			return;
+
+		CBasePlayer* pPlayer = GetClassPtr((CBasePlayer*)pev);
+		if (pPlayer->pGrappleBolt)
+			pPlayer->pGrappleBolt->Killed(NULL, 0);
+
+		pPlayer->pGrappleBolt = CGrappleBolt::BoltCreate();
+		pPlayer->pGrappleBolt->Init(pPlayer);
+	}
+	else if (FStrEq(pcmd, "-hook"))
+	{
+		CBasePlayer* pPlayer = GetClassPtr((CBasePlayer*)pev);
+		if (!pPlayer->pGrappleBolt)
+			return;
+
+		if (pPlayer->IsHanging)
+		{
+			pPlayer->IsHanging = false;
+			pPlayer->m_afPhysicsFlags &= ~PFLAG_ONTRAIN;
+		}
+
+		// Oz runes - make sure we don't reset the gravity of the low gravity rune
+		if (pPlayer->m_iRune == RUNE_LOWGRAV) // Low Gravity Rune
+		{
+			pev->gravity = 1;
+			pev->gravity = oz_lowgravruneamount.value;
 		}
 		else
-			ClientPrint(pev, HUD_PRINTCONSOLE, "Spectator mode is disabled.\n");
+		{
+			pev->gravity = 1;
+		}
+
+		pev->movetype = MOVETYPE_WALK;
+		pPlayer->pGrappleBolt->Killed(NULL, 0);
+		pPlayer->pGrappleBolt = NULL;
 	}
-	else if (FStrEq(pcmd, "specmode")) // new spectator mode
+	// Oz personal messages
+	else if (FStrEq(pcmd, "intN=1") || FStrEq(pcmd, "intN=2") || FStrEq(pcmd, "intN=3") || FStrEq(pcmd, "intN=4"))
 	{
-		if (player->IsObserver())
-			player->Observer_SetMode(atoi(CMD_ARGV(1)));
+		GetClassPtr((CBasePlayer*)pev);
+		char szText[201];
+		hudtextparms_t hText;
+
+		memset(&hText, 0, sizeof(hText));
+		if (FStrEq(pcmd, "intN=1"))
+		{
+			sprintf(szText, "The Originator and Programmer of\n\nOz Deathmatch\n\nhas entered the server\n\nSay hello to Willi!\n");
+			hText.x = 0.04;
+			hText.y = 0.8;
+		}
+		else
+		{
+			if (FStrEq(pcmd, "intN=2"))
+				sprintf(szText, "Attention!\n\n              Player's \n\n         attention\n\n             is required.\n");
+			else if (FStrEq(pcmd, "intN=3"))
+				sprintf(szText, "    NOTICE!\n\n              This server is monitored\n\n         For\n\n            Inappropriate Conduct.\n");
+			else
+				sprintf(szText, "Behold...For a \n\n              Paradigm Lozt Regular\n\n         walks among you!\n");
+			hText.x = 0.3;
+			hText.y = 0.25;
+		}
+		hText.channel = 4;
+		hText.effect = 0;
+		hText.r1 = hText.g1 = hText.b1 = 255;
+		hText.a1 = 255;
+		hText.r2 = hText.g2 = hText.b2 = 255;
+		hText.a2 = 255;
+		hText.fadeinTime = 1;
+		hText.fadeoutTime = 5;
+		hText.holdTime = 5;
+		hText.fxTime = 0.5;
+		UTIL_HudMessageAll(hText, szText);
+	}
+	// Oz runes - drop command
+	else if (FStrEq(pcmd, "droprune"))
+	{
+		CBasePlayer* pPlayer = GetClassPtr((CBasePlayer*)pev);
+		if (pPlayer->m_iRune == 0)
+			return;
+
+		char szText[201];
+		hudtextparms_t hText;
+
+		sprintf(szText, "%s Discarded!\n", GetRuneName(pPlayer->m_iRune));
+
+		if (oz_logrune.value == 1)
+		{
+			if (g_teamplay)
+			{
+				UTIL_LogPrintf("\"%s<%i><%s><%s>\" Discarded the  \"%s\".\n",
+					STRING(pEntity->v.netname),
+					GETPLAYERUSERID(pEntity),
+					GETPLAYERAUTHID(pEntity),
+					g_engfuncs.pfnInfoKeyValue(g_engfuncs.pfnGetInfoKeyBuffer(pEntity), "model"),
+					GetRuneName(pPlayer->m_iRune));
+			}
+			else
+			{
+				UTIL_LogPrintf("\"%s<%i><%s><%i>\" Discarded the \"%s\".\n",
+					STRING(pEntity->v.netname),
+					GETPLAYERUSERID(pEntity),
+					GETPLAYERAUTHID(pEntity),
+					GETPLAYERUSERID(pEntity),
+					GetRuneName(pPlayer->m_iRune));
+			}
+		}
+
+		pPlayer->RemoveRune();
+
+		memset(&hText, 0, sizeof(hText));
+		hText.channel = 1;
+		hText.x = 0.04;
+		hText.y = 0.85;
+		hText.effect = 0;
+		hText.r1 = 255;
+		hText.g1 = 0;
+		hText.b1 = 0;
+		hText.a1 = 255;
+		hText.r2 = 255;
+		hText.g2 = 0;
+		hText.b2 = 0;
+		hText.a2 = 255;
+		hText.fadeinTime = 0;
+		hText.fadeoutTime = 1;
+		hText.holdTime = 5;
+		hText.fxTime = 0.5;
+		UTIL_HudMessage(pPlayer, hText, szText);
+	}
+	// Oz runes - current rune
+	else if (FStrEq(pcmd, "runestatus"))
+	{
+		CBasePlayer* pPlayer = GetClassPtr((CBasePlayer*)pev);
+		hudtextparms_t hText;
+
+		memset(&hText, 0, sizeof(hText));
+		hText.channel = 4;
+		hText.x = 0.04;
+		hText.y = 0.75;
+		hText.effect = 0;
+		hText.r1 = 255;
+		hText.g1 = 255;
+		hText.b1 = 0;
+		hText.a1 = 255;
+		hText.r2 = 255;
+		hText.g2 = 255;
+		hText.b2 = 0;
+		hText.a2 = 255;
+		hText.fadeinTime = 0;
+		hText.fadeoutTime = 1;
+		hText.holdTime = 5;
+		hText.fxTime = 0.5;
+		UTIL_HudMessage(pPlayer, hText, GetRuneDescription(pPlayer->m_iRune));
 	}
 	else if (FStrEq(pcmd, "closemenus"))
 	{
 		// just ignore it
-	}
-	else if (FStrEq(pcmd, "follownext")) // follow next player
-	{
-		if (player->IsObserver())
-			player->Observer_FindNextPlayer(atoi(CMD_ARGV(1)) != 0);
 	}
 	else if (g_pGameRules->ClientCommand(player, pcmd))
 	{
@@ -627,6 +999,8 @@ userinfo - gives dll a chance to modify it before
 it gets sent into the rest of the engine.
 ========================
 */
+// orig 0x97140. Same as the original (it has the % filter too); halflife-updated's maxClients > 1 test
+// around the name-change message changes nothing in multiplayer.
 void ClientUserInfoChanged(edict_t* pEntity, char* infobuffer)
 {
 	// Is the client spawned yet?
@@ -688,6 +1062,7 @@ void ClientUserInfoChanged(edict_t* pEntity, char* infobuffer)
 
 static int g_serveractive = 0;
 
+// orig 0x97450
 void ServerDeactivate()
 {
 	// It's possible that the engine will call this function more times than is necessary
@@ -703,10 +1078,19 @@ void ServerDeactivate()
 	//
 }
 
+// orig 0x97480. OZ counts the deathmatch starts first (NumPlayerStarts, read by the runes).
+// halflife-updated's loop bounds kept: the original's SDK 2.x test (i < clientMax) skips the world and
+// tries the last client slot; neither has anything to activate.
 void ServerActivate(edict_t* pEdictList, int edictCount, int clientMax)
 {
 	int i;
 	CBaseEntity* pClass;
+
+	// Oz
+	NumPlayerStarts = 0;
+	CBaseEntity* pSpot = NULL;
+	while ((pSpot = UTIL_FindEntityByClassname(pSpot, "info_player_deathmatch")) != NULL)
+		NumPlayerStarts++;
 
 	// Every call to ServerActivate should be matched by a call to ServerDeactivate
 	g_serveractive = 1;
@@ -745,6 +1129,7 @@ PlayerPreThink
 Called every frame before physics are run
 ================
 */
+// orig 0x975b0
 void PlayerPreThink(edict_t* pEntity)
 {
 	entvars_t* pev = &pEntity->v;
@@ -761,10 +1146,210 @@ PlayerPostThink
 Called every frame after physics are run
 ================
 */
+// orig 0x976b0. OZ: the join-time HUD lines (version, help, oz_line1/oz_line2, MOTD, observer hint),
+// the rune HUD refresh, the default-name message and spawn protection (glow shell and god mode for
+// 120 frames or until the first attack).
 void PlayerPostThink(edict_t* pEntity)
 {
 	entvars_t* pev = &pEntity->v;
 	CBasePlayer* pPlayer = (CBasePlayer*)GET_PRIVATE(pEntity);
+
+	// Oz messaging (the original calls through pPlayer unchecked here)
+	if (pPlayer->IsNetClient())
+	{
+		if (pPlayer->m_iRuneHudTime < 900)
+			pPlayer->m_iRuneHudTime++;
+		else
+			pPlayer->UpdateRuneInfo();
+
+		if (pPlayer->m_iStart < 26)
+			pPlayer->m_iStart++;
+		if (pPlayer->m_iCommands < 26)
+			pPlayer->m_iCommands++;
+		if (pPlayer->m_iOz < 26)
+			pPlayer->m_iOz++;
+		if (pPlayer->m_iMOTDTimer < 26)
+			pPlayer->m_iMOTDTimer++;
+
+		if (pPlayer->m_iNameCheckTimer < 26 && ++pPlayer->m_iNameCheckTimer == 25)
+		{
+			// a default name gets PlayerMessage
+			const char* pszName = STRING(pPlayer->pev->netname);
+			const size_t iLen = strlen(pszName);
+			if (iLen == 6)
+			{
+				if (0 == stricmp(pszName, "Player"))
+					pPlayer->PlayerMessage(pPlayer->edict());
+			}
+			else if (iLen == 9 && 0 != isdigit(pszName[1])) // VERIFY: the original tests isdigit on name[1] (0x97847); an odd test, read literally
+			{
+				pPlayer->PlayerMessage(pPlayer->edict());
+			}
+
+			pPlayer->m_iOz = 0;
+			pPlayer->m_iStart = 0;
+			pPlayer->m_iCommands = 0;
+		}
+
+		if (pPlayer->m_iMOTDTimer == 25)
+		{
+			if (pPlayer->IsNetClient())
+				CLIENT_COMMAND(pEntity, "console 1.0\n");
+
+			if (oz_picture.value == 1)
+			{
+				pPlayer->m_iOz = 26;
+				pPlayer->m_iStart = 26;
+				pPlayer->m_iCommands = 26;
+			}
+			else
+			{
+				pPlayer->m_iOz = 0;
+				pPlayer->m_iStart = 0;
+				pPlayer->m_iCommands = 0;
+				pPlayer->MOTD(pPlayer->edict());
+			}
+		}
+
+		if (pPlayer->m_iCommands == 25)
+		{
+			char szText[201];
+			hudtextparms_t hText;
+
+			sprintf(szText, "Type help in the console for command help\n");
+
+			memset(&hText, 0, sizeof(hText));
+			hText.channel = 4;
+			hText.x = 0.01;
+			hText.y = 0.9;
+			hText.effect = 0;
+			hText.r1 = 0;
+			hText.g1 = 255;
+			hText.b1 = 0;
+			hText.a1 = 255;
+			hText.r2 = 0;
+			hText.g2 = 255;
+			hText.b2 = 0;
+			hText.a2 = 255;
+			hText.fadeinTime = 1;
+			hText.fadeoutTime = 5;
+			hText.holdTime = 45;
+			hText.fxTime = 0.5;
+			UTIL_HudMessage(pPlayer, hText, szText);
+			pPlayer->m_iCommands = 26;
+		}
+
+		if (pPlayer->m_iOz == 25)
+		{
+			if (pPlayer->IsNetClient())
+			{
+				CLIENT_COMMAND(pEntity, UTIL_VarArgs("cl_forwardspeed %f\n", CVAR_GET_FLOAT("sv_maxspeed")));
+				CLIENT_COMMAND(pEntity, UTIL_VarArgs("cl_backspeed %f\n", CVAR_GET_FLOAT("sv_maxspeed")));
+			}
+
+			char szText[201];
+			hudtextparms_t hText;
+
+			if (CVAR_GET_FLOAT("mp_teamplay") != 0)
+				sprintf(szText, "Oz Teamplay v3.02\n%s\n", CVAR_GET_STRING("oz_link"));
+			else
+				sprintf(szText, "Oz Deathmatch v3.02\n%s\n", CVAR_GET_STRING("oz_link"));
+
+			memset(&hText, 0, sizeof(hText));
+			hText.channel = 2;
+			hText.x = 0.5;
+			hText.y = 0.01;
+			hText.effect = 0;
+			hText.r1 = 0;
+			hText.g1 = 255;
+			hText.b1 = 0;
+			hText.a1 = 255;
+			hText.r2 = 0;
+			hText.g2 = 255;
+			hText.b2 = 0;
+			hText.a2 = 255;
+			hText.fadeinTime = 1;
+			hText.fadeoutTime = 5;
+			hText.holdTime = 45;
+			hText.fxTime = 0; // the original leaves it at memset's 0
+			UTIL_HudMessage(pPlayer, hText, szText);
+			pPlayer->m_iOz = 26;
+		}
+
+		// the server's own lines, the frame after the help hint
+		if (pPlayer->m_iCommands == 26)
+		{
+			char szText[201];
+			hudtextparms_t hText;
+
+			sprintf(szText, "%s\n%s\n", CVAR_GET_STRING("oz_line1"), CVAR_GET_STRING("oz_line2"));
+
+			memset(&hText, 0, sizeof(hText));
+			hText.channel = 0;
+			hText.x = 0.01;
+			hText.y = 0.6;
+			hText.effect = 0;
+			hText.r1 = 215;
+			hText.g1 = 150;
+			hText.b1 = 253;
+			hText.a1 = 255;
+			hText.r2 = 215;
+			hText.g2 = 150;
+			hText.b2 = 253;
+			hText.a2 = 255;
+			hText.fadeinTime = 1;
+			hText.fadeoutTime = 5;
+			hText.holdTime = 7;
+			hText.fxTime = 0.5;
+			UTIL_HudMessage(pPlayer, hText, szText);
+			pPlayer->m_iCommands = 27;
+		}
+
+		if (pPlayer->m_iStart == 25 && pPlayer->m_iObserver == 1)
+		{
+			char szText[201];
+			hudtextparms_t hText;
+
+			sprintf(szText, "                                    - Observer Mode -\nFire or Use to escape - Jump to change view - Alt Fire changes Players\n");
+
+			memset(&hText, 0, sizeof(hText));
+			hText.channel = 1;
+			hText.x = 0.3;
+			hText.y = 0.85;
+			hText.effect = 0;
+			hText.r1 = 255;
+			hText.g1 = 0;
+			hText.b1 = 0;
+			hText.a1 = 255;
+			hText.r2 = 255;
+			hText.g2 = 0;
+			hText.b2 = 0;
+			hText.a2 = 255;
+			hText.fadeinTime = 0;
+			hText.fadeoutTime = 0;
+			hText.holdTime = 40;
+			hText.fxTime = 0.5;
+			UTIL_HudMessage(pPlayer, hText, szText);
+			pPlayer->m_iStart = 26;
+		}
+	}
+
+	// Oz spawn protection
+	if (pPlayer->m_iSpawnProtect < 120)
+	{
+		if ((pPlayer->m_afButtonPressed & IN_ATTACK) != 0)
+			pPlayer->m_iSpawnProtect = 120;
+		else
+			pPlayer->m_iSpawnProtect++;
+	}
+
+	if (pPlayer->m_iSpawnProtect == 120)
+	{
+		pPlayer->pev->rendermode = kRenderNormal;
+		pev->renderfx &= ~kRenderFxGlowShell;
+		pPlayer->pev->flags &= ~FL_GODMODE;
+		pPlayer->m_iSpawnProtect = 121;
+	}
 
 	if (pPlayer)
 		pPlayer->PostThink();
@@ -772,11 +1357,13 @@ void PlayerPostThink(edict_t* pEntity)
 
 
 
+// orig 0x97e60
 void ParmsNewLevel()
 {
 }
 
 
+// orig 0x97e70
 void ParmsChangeLevel()
 {
 	// retrieve the pointer to the save data
@@ -883,16 +1470,207 @@ void InitMapLoadingUtils()
 
 static bool g_LastAllowBunnyHoppingState = false;
 
+// orig 0x97eb0. Oz: a connected client's player, or NULL. GetClassPtr makes one for a client edict
+// without private data, as the original does.
+CBasePlayer* CBasePlayerByIndex(int playerIndex)
+{
+	CBasePlayer* pPlayer = NULL;
+
+	if (playerIndex > 0 && playerIndex <= gpGlobals->maxClients)
+	{
+		edict_t* pPlayerEdict = INDEXENT(playerIndex);
+		if (pPlayerEdict && !pPlayerEdict->free && (pPlayerEdict->v.flags & (FL_CLIENT | FL_FAKECLIENT)) != 0)
+			pPlayer = GetClassPtr((CBasePlayer*)&pPlayerEdict->v);
+	}
+
+	return pPlayer;
+}
+
 //
 // GLOBALS ASSUMED SET:  g_ulFrameCount
 //
+// orig 0x97f20. OZ: RhoBot, run before the game rules: bot thinking, nav marking under live humans,
+// min_clients/bot_number upkeep, then the "bot" cvar's commands (once a second). Kept from
+// halflife-updated: the "bj" physics key (sv_allowbunnyhopping, reference/DEVIATIONS.md) and the
+// sv_load_all_maps helper, both only while the game isn't over.
 void StartFrame()
 {
+	static float check_server_cmd = 0.0;
+	static char cmd_line[80];
+	static char server_cmd[80];
+	static int index;
+
+	const int iBotNumber = (int)bot_number.value;
+	int iPlayers = 0;
+	int iBots = 0;
+
+	for (int i = 1; i <= gpGlobals->maxClients; i++)
+	{
+		CBasePlayer* pPlayer = CBasePlayerByIndex(i);
+		if (pPlayer && pPlayer->IsPlayer())
+		{
+			iPlayers++;
+			if (pPlayer->IsBot())
+			{
+				iBots++;
+				pPlayer->BotThink();
+			}
+			else if (!pPlayer->IsBot() && pPlayer->IsNetClient() && pPlayer->IsAlive())
+			{
+				WorldGraph.MarkLocationFavorable(pPlayer->pev->origin);
+			}
+		}
+	}
+
+	if ((oz_minclients.value == 0 && iBotNumber == 0) || gpGlobals->time < 10.0)
+	{
+		bInitBotCycle = 0;
+	}
+	else if (iBots == 0 && bInitBotCycle == 0)
+	{
+		TimeNextPossibleBotConnect = 10.0;
+		bInitBotCycle = UseBotCycle(0);
+		bInitBotCycle = 1;
+	}
+	else if (((iBots < oz_minclients.value - (iPlayers - iBots) && iPlayers < gpGlobals->maxClients - 1 && iBots < 32) || iBots < iBotNumber) && TimeNextPossibleBotConnect <= gpGlobals->time)
+	{
+		TimeNextPossibleBotConnect = gpGlobals->time + 10.0;
+		BotConnect(iBots);
+	}
+
+	if ((iBots > iBotNumber && iPlayers == gpGlobals->maxClients) || (iPlayers > oz_minclients.value && iBots > iBotNumber))
+	{
+		for (int i = gpGlobals->maxClients; i > 0; i--)
+		{
+			CBasePlayer* pPlayer = (CBasePlayer*)UTIL_PlayerByIndex(i);
+			if (pPlayer && pPlayer->IsBot())
+			{
+				pPlayer->pev->health = 0;
+				sprintf(server_cmd, "kick \"%s\"\n", STRING(pPlayer->pev->netname));
+				SERVER_COMMAND(server_cmd);
+				bInitBotCycle = UseBotCycle(--iBots);
+				break;
+			}
+		}
+	}
+
+	BotGlobals.HandleAutoAdjDifficulty();
+
 	if (g_pGameRules)
+	{
 		g_pGameRules->Think();
 
+		// the "bot" cvar: addbot, removebot <name>, removebots
+		if (fabs(check_server_cmd - gpGlobals->time) > 1.0)
+		{
+			check_server_cmd = gpGlobals->time + 1.0;
+
+			const char* cvar_bot = CVAR_GET_STRING("bot");
+			if (cvar_bot && cvar_bot[0])
+			{
+				char* cmd;
+				char* arg1 = NULL;
+
+				strcpy(cmd_line, cvar_bot); // unchecked, as the original (see the dossier)
+				index = 0;
+				cmd = cmd_line;
+
+				// skip to blank or end of string...
+				while (cmd_line[index] != ' ' && cmd_line[index] != 0)
+					index++;
+
+				if (cmd_line[index] == ' ')
+				{
+					cmd_line[index++] = 0;
+					arg1 = &cmd_line[index];
+
+					// removebot takes the rest of the line (a name may have spaces); the rest split two more words
+					if (0 != strcmp(cmd, "removebot"))
+					{
+						while (cmd_line[index] != ' ' && cmd_line[index] != 0)
+							index++;
+
+						if (cmd_line[index] == ' ')
+						{
+							cmd_line[index++] = 0;
+
+							while (cmd_line[index] != ' ' && cmd_line[index] != 0)
+								index++;
+
+							if (cmd_line[index] == ' ')
+								cmd_line[index++] = 0;
+						}
+					}
+				}
+
+				if (0 == strcmp(cmd, "addbot"))
+				{
+					int iCount = 0;
+					for (int i = 1; i <= gpGlobals->maxClients; i++)
+					{
+						CBaseEntity* pPlayer = UTIL_PlayerByIndex(i);
+						if (pPlayer && pPlayer->IsPlayer())
+							iCount++;
+					}
+
+					if (iCount > 31)
+					{
+						UTIL_ClientPrintAll(HUD_PRINTNOTIFY, "Rho-Bot supports a maximum of 32 players.\n");
+						if (IS_DEDICATED_SERVER())
+							printf("Rho-Bot supports a maximum of 32 players.\n");
+						return; // the original returns here, before clearing "bot" (see the dossier)
+					}
+
+					char msg[128] = "bot_number ###";
+					sprintf(msg, "bot_number %d\n", (int)bot_number.value + 1);
+					SERVER_COMMAND(msg);
+					if (IS_DEDICATED_SERVER())
+						printf("%s", msg);
+				}
+				else if (0 == strcmp(cmd, "removebot"))
+				{
+					if (arg1)
+					{
+						CBaseEntity* pBot = UTIL_FindEntityByString(NULL, "netname", arg1);
+						char msg[128] = "kick Some Bot\n";
+						if (!pBot)
+						{
+							sprintf(msg, "could not kick \"%s\"\n", arg1);
+							UTIL_ClientPrintAll(HUD_PRINTNOTIFY, msg);
+						}
+						else
+						{
+							pBot->pev->health = 0;
+							sprintf(server_cmd, "kick \"%s\"\n", STRING(pBot->pev->netname));
+							SERVER_COMMAND(server_cmd);
+
+							strcpy(msg, "bot_number ###");
+							sprintf(msg, "bot_number %d\n", (int)bot_number.value - 1);
+							SERVER_COMMAND(msg);
+						}
+						if (IS_DEDICATED_SERVER())
+							printf("%s", msg);
+					}
+				}
+				else if (0 == strcmp(cmd, "removebots"))
+				{
+					char msg[128] = "bot_number ###";
+					sprintf(msg, "bot_number %d\n", 0);
+					SERVER_COMMAND(msg);
+					if (IS_DEDICATED_SERVER())
+						printf("%s", msg);
+				}
+			}
+
+			CVAR_SET_STRING("bot", "");
+		}
+	}
+
 	if (g_fGameOver)
+	{
+		check_server_cmd = 0;
 		return;
+	}
 
 	gpGlobals->teamplay = teamplay.value;
 	g_ulFrameCount++;
@@ -925,6 +1703,8 @@ void StartFrame()
 }
 
 
+// orig 0x98870. OZ adds ambience/particle_suck1.wav. plats/vehicle_ignition.wav stays for
+// halflife-updated's func_vehicle, which this build still has (the original has neither).
 void ClientPrecache()
 {
 	// setup precaches always needed
@@ -1039,6 +1819,8 @@ void ClientPrecache()
 
 	if (giPrecacheGrunt)
 		UTIL_PrecacheOther("monster_human_grunt");
+
+	PRECACHE_SOUND("ambience/particle_suck1.wav"); // Oz
 }
 
 /*
@@ -1048,12 +1830,13 @@ GetGameDescription
 Returns the descriptive name of this .dll.  E.g., Half-Life, or Team Fortress 2
 ===============
 */
+// orig 0x98e40
 const char* GetGameDescription()
 {
 	if (g_pGameRules) // this function may be called before the world has spawned, and the game rules initialized
 		return g_pGameRules->GetGameDescription();
 	else
-		return "Half-Life";
+		return "Oz_DM 3.0";
 }
 
 /*
@@ -1063,6 +1846,7 @@ Sys_Error
 Engine is going to shut down, allows setting a breakpoint in game .dll to catch that occasion
 ================
 */
+// orig 0x98e90
 void Sys_Error(const char* error_string)
 {
 	// Default case, do nothing.  MOD AUTHORS:  Add code ( e.g., _asm { int 3 }; here to cause a breakpoint for debugging your game .dlls
@@ -1077,6 +1861,7 @@ UNDONE:  This only sets the # of frames of the spray can logo
 animation right now.
 ================
 */
+// orig 0x98ea0
 void PlayerCustomization(edict_t* pEntity, customization_t* pCust)
 {
 	entvars_t* pev = &pEntity->v;
@@ -1117,6 +1902,7 @@ SpectatorConnect
 A spectator has joined the game
 ================
 */
+// orig 0x98f40
 void SpectatorConnect(edict_t* pEntity)
 {
 	entvars_t* pev = &pEntity->v;
@@ -1133,6 +1919,7 @@ SpectatorConnect
 A spectator has left the game
 ================
 */
+// orig 0x98f80
 void SpectatorDisconnect(edict_t* pEntity)
 {
 	entvars_t* pev = &pEntity->v;
@@ -1149,6 +1936,7 @@ SpectatorConnect
 A spectator has sent a usercmd
 ================
 */
+// orig 0x98fc0
 void SpectatorThink(edict_t* pEntity)
 {
 	entvars_t* pev = &pEntity->v;
@@ -1176,6 +1964,7 @@ From the eye position, we set up the PAS and PVS to use for filtering network me
 NOTE:  Do not cache the values of pas and pvs, as they depend on reusable memory in the engine, they are only good for this one frame
 ================
 */
+// orig 0x99000. The original's SDK 2.3 code sees from the observed player (Valve's 2013 seed dropped it).
 void SetupVisibility(edict_t* pViewEntity, edict_t* pClient, unsigned char** pvs, unsigned char** pas)
 {
 	Vector org;
@@ -1185,6 +1974,12 @@ void SetupVisibility(edict_t* pViewEntity, edict_t* pClient, unsigned char** pvs
 	if (pViewEntity)
 	{
 		pView = pViewEntity;
+	}
+
+	CBasePlayer* pPlayer = (CBasePlayer*)CBaseEntity::Instance(pClient);
+	if (pPlayer && pPlayer->pev->iuser2 && pPlayer->m_hObserverTarget)
+	{
+		pView = pPlayer->m_hObserverTarget->edict();
 	}
 
 	if ((pClient->v.flags & FL_PROXY) != 0)
@@ -1219,6 +2014,9 @@ player is 1 if the ent/e is a player and 0 otherwise
 pSet is either the PAS or PVS that we previous set up.  We can use it to ask the engine to filter the entity against the PAS or PVS.
 we could also use the pas/ pvs that we set in SetupVisibility, if we wanted to.  Caching the value is valid in that case, but still only for the current frame
 */
+// orig 0x991a0. halflife-updated's kept: the MAX_EDICTS test (fix), the FL_FLY/m_EFlags SLERP rule
+// (halflife#3228; decided with mod-rc2's AddToFullPack, reference FIXES.md). Left out: the HL25
+// EFLAG_FLESH_SOUND flag (a feature, as mod-rockcrowbar).
 int AddToFullPack(struct entity_state_s* state, int e, edict_t* ent, edict_t* host, int hostflags, int player, unsigned char* pSet)
 {
 	// Entities with an index greater than this will corrupt the client's heap because 
@@ -1419,12 +2217,6 @@ int AddToFullPack(struct entity_state_s* state, int e, edict_t* ent, edict_t* ho
 		state->health = ent->v.health;
 	}
 
-	CBaseEntity* pEntity = static_cast<CBaseEntity*>(GET_PRIVATE(ent));
-	if (pEntity && pEntity->Classify() != CLASS_NONE && pEntity->Classify() != CLASS_MACHINE)
-		state->eflags |= EFLAG_FLESH_SOUND;
-	else
-		state->eflags &= ~EFLAG_FLESH_SOUND;
-
 	return 1;
 }
 
@@ -1435,6 +2227,7 @@ CreateBaseline
 Creates baselines used for network encoding, especially for player data since players are not spawned until connect time.
 ===================
 */
+// orig 0x99710
 void CreateBaseline(int player, int eindex, struct entity_state_s* baseline, struct edict_s* entity, int playermodelindex, Vector* player_mins, Vector* player_maxs)
 {
 	baseline->origin = entity->v.origin;
@@ -1504,6 +2297,7 @@ static entity_field_alias_t entity_field_alias[] =
 		{"angles[2]", 0},
 };
 
+// orig 0x99920
 void Entity_FieldInit(struct delta_s* pFields)
 {
 	entity_field_alias[FIELD_ORIGIN0].field = DELTA_FINDFIELD(pFields, entity_field_alias[FIELD_ORIGIN0].name);
@@ -1522,6 +2316,7 @@ Callback for sending entity_state_t info over network.
 FIXME:  Move to script
 ==================
 */
+// orig 0x999e0
 void Entity_Encode(struct delta_s* pFields, const unsigned char* from, const unsigned char* to)
 {
 	entity_state_t *f, *t;
@@ -1578,6 +2373,7 @@ static entity_field_alias_t player_field_alias[] =
 		{"origin[2]", 0},
 };
 
+// orig 0x99bf0
 void Player_FieldInit(struct delta_s* pFields)
 {
 	player_field_alias[FIELD_ORIGIN0].field = DELTA_FINDFIELD(pFields, player_field_alias[FIELD_ORIGIN0].name);
@@ -1592,6 +2388,7 @@ Player_Encode
 Callback for sending entity_state_t for players info over network. 
 ==================
 */
+// orig 0x99c60
 void Player_Encode(struct delta_s* pFields, const unsigned char* from, const unsigned char* to)
 {
 	entity_state_t *f, *t;
@@ -1653,6 +2450,7 @@ entity_field_alias_t custom_entity_field_alias[] =
 		{"animtime", 0},
 };
 
+// orig 0x99dd0
 void Custom_Entity_FieldInit(struct delta_s* pFields)
 {
 	custom_entity_field_alias[CUSTOMFIELD_ORIGIN0].field = DELTA_FINDFIELD(pFields, custom_entity_field_alias[CUSTOMFIELD_ORIGIN0].name);
@@ -1674,6 +2472,7 @@ Callback for sending entity_state_t info ( for custom entities ) over network.
 FIXME:  Move to script
 ==================
 */
+// orig 0x99f20
 void Custom_Encode(struct delta_s* pFields, const unsigned char* from, const unsigned char* to)
 {
 	entity_state_t *f, *t;
@@ -1726,6 +2525,7 @@ RegisterEncoders
 Allows game .dll to override network encoding of certain types of entities and tweak values, etc.
 =================
 */
+// orig 0x9a0c0
 void RegisterEncoders()
 {
 	DELTA_ADDENCODER("Entity_Encode", Entity_Encode);
@@ -1733,6 +2533,7 @@ void RegisterEncoders()
 	DELTA_ADDENCODER("Player_Encode", Player_Encode);
 }
 
+// orig 0x9a130
 int GetWeaponData(struct edict_s* player, struct weapon_data_s* info)
 {
 	memset(info, 0, MAX_WEAPONS * sizeof(weapon_data_t));
@@ -1806,24 +2607,15 @@ Data sent to current client only
 engine sets cd to 0 before calling.
 =================
 */
+// orig 0x9a370. OZ sends the spectator iuser1/iuser2 only with oz_advspec 1. Valve's 2013 first-person
+// spectating (the chased player's data while OBS_IN_EYE) is left out as a feature. Kept: the fov from
+// m_iFOV (halflife-updated's 6f8aac9 removed pev->fov; same value) and this repo's m_WeaponBits sync.
 void UpdateClientData(const edict_t* ent, int sendweapons, struct clientdata_s* cd)
 {
 	if (!ent || !ent->pvPrivateData)
 		return;
 	entvars_t* pev = (entvars_t*)&ent->v;
 	CBasePlayer* pl = dynamic_cast<CBasePlayer*>(CBasePlayer::Instance(pev));
-	entvars_t* pevOrg = NULL;
-
-	// if user is spectating different player in First person, override some vars
-	if (pl && pl->pev->iuser1 == OBS_IN_EYE)
-	{
-		if (pl->m_hObserverTarget)
-		{
-			pevOrg = pev;
-			pev = pl->m_hObserverTarget->pev;
-			pl = dynamic_cast<CBasePlayer*>(CBasePlayer::Instance(pev));
-		}
-	}
 
 	cd->flags = pev->flags;
 	cd->health = pev->health;
@@ -1870,13 +2662,7 @@ void UpdateClientData(const edict_t* ent, int sendweapons, struct clientdata_s* 
 	cd->pushmsec = pev->pushmsec;
 
 	//Spectator mode
-	if (pevOrg != NULL)
-	{
-		// don't use spec vars from chased player
-		cd->iuser1 = pevOrg->iuser1;
-		cd->iuser2 = pevOrg->iuser2;
-	}
-	else
+	if (oz_advspec.value == 1) // Oz
 	{
 		cd->iuser1 = pev->iuser1;
 		cd->iuser2 = pev->iuser2;
@@ -1938,6 +2724,7 @@ We're about to run this usercmd for the specified player.  We can set up groupin
 This is the time to examine the usercmd for anything extra.  This call happens even if think does not.
 =================
 */
+// orig 0x9a6b0
 void CmdStart(const edict_t* player, const struct usercmd_s* cmd, unsigned int random_seed)
 {
 	entvars_t* pev = (entvars_t*)&player->v;
@@ -1961,6 +2748,7 @@ CmdEnd
 Each cmdstart is exactly matched with a cmd end, clean up any group trace flags, etc. here
 =================
 */
+// orig 0x9a730
 void CmdEnd(const edict_t* player)
 {
 	entvars_t* pev = (entvars_t*)&player->v;
@@ -1982,6 +2770,7 @@ ConnectionlessPacket
   size of the response_buffer, so you must zero it out if you choose not to respond.
 ================================
 */
+// orig 0x9a790
 int ConnectionlessPacket(const struct netadr_s* net_from, const char* args, char* response_buffer, int* response_buffer_size)
 {
 	// Parse stuff from args
@@ -2003,6 +2792,8 @@ GetHullBounds
   Engine calls this to enumerate player collision hulls, for prediction.  Return 0 if the hullnumber doesn't exist.
 ================================
 */
+// orig 0x9a7b0. halflife-updated's fix, kept (c3c5576, halflife#3229): SDK 2.3's assigns the vectors
+// to its own pointer copies and never fills mins/maxs.
 int GetHullBounds(int hullnumber, float* mins, float* maxs)
 {
 	return static_cast<int>(PM_GetHullBounds(hullnumber, mins, maxs));
@@ -2016,6 +2807,7 @@ Create pseudo-baselines for items that aren't placed in the map at spawn time, b
 to be created during play ( e.g., grenades, ammo packs, projectiles, corpses, etc. )
 ================================
 */
+// orig 0x9a890
 void CreateInstancedBaselines()
 {
 	int iret = 0;
@@ -2038,6 +2830,7 @@ One of the ENGINE_FORCE_UNMODIFIED files failed the consistency check for the sp
  Return 0 to allow the client to continue, 1 to force immediate disconnection ( with an optional disconnect message of up to 256 characters )
 ================================
 */
+// orig 0x9a8d0
 int InconsistentFile(const edict_t* player, const char* filename, char* disconnect_message)
 {
 	// Server doesn't care?
@@ -2062,12 +2855,59 @@ AllowLagCompensation
   if you want.
 ================================
 */
+// orig 0x9a940. OZ returns 0 (no lag compensation); halflife-updated's seed returns 1.
 int AllowLagCompensation()
 {
-	return 1;
+	return 0;
 }
 
-// TEMP STUB (base): real one belongs in client.cpp, orig 0x975f0 (the rune HUD text).
+// orig 0x975f0. Oz: the held rune's name at the bottom of the screen (not in observer mode).
 void CBasePlayer::UpdateRuneInfo()
 {
+	CBasePlayer* pPlayer = GetClassPtr((CBasePlayer*)pev);
+
+	if (pPlayer->m_iObserver != 1)
+	{
+		hudtextparms_t hText;
+
+		memset(&hText, 0, sizeof(hText));
+		hText.channel = 1;
+		hText.x = 0.46;
+		hText.y = 0.98;
+		hText.effect = 0;
+		hText.r1 = 210;
+		hText.g1 = 120;
+		hText.b1 = 25;
+		hText.a1 = 10;
+		hText.r2 = 210;
+		hText.g2 = 120;
+		hText.b2 = 25;
+		hText.a2 = 10;
+		hText.fadeinTime = 0;
+		hText.fadeoutTime = 0.5;
+		hText.holdTime = 999;
+		hText.fxTime = 0;
+		UTIL_HudMessage(pPlayer, hText, GetRuneName(pPlayer->m_iRune));
+	}
+
+	pPlayer->m_iRuneHudTime = 0;
 }
+
+// TEMP STUB (rules): real one belongs in player.cpp
+void CBasePlayer::RemoveRune() {}
+// TEMP STUB (rules): real one belongs in player.cpp
+void CBasePlayer::Teleport() {}
+// TEMP STUB (rules): real one belongs in player.cpp
+void CBasePlayer::MOTD(edict_t* client) {}
+// TEMP STUB (rules): real one belongs in player.cpp
+void CBasePlayer::PlayerMessage(edict_t* client) {}
+// TEMP STUB (rules): real ones belong in bot_misc.cpp
+int UseBotCycle(int iBots) { return 0; }
+void BotConnect(int iBots) {}
+int bInitBotCycle;
+float TimeNextPossibleBotConnect;
+void CBaseBotGlobals::HandleAutoAdjDifficulty() {}
+CBaseBotGlobals BotGlobals;
+// TEMP STUB (rules): real ones belong in bot_nav.cpp
+void CGraph::MarkLocationFavorable(Vector& vecLocation) {}
+void CGraph::SaveNavToFile() {}

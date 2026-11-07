@@ -365,6 +365,25 @@ public:
 	int m_iRuneHudTime;			 // Oz: orig +0x65c, VERIFY name; CItem::RuneHud sets 700, UpdateRuneInfo clears it
 	int m_iRune;				 // Oz: orig +0x674, VERIFY name; the rune held (RUNE_* in items.h), 0 for none
 	int m_iRandomRune;			 // Oz: orig +0x678, VERIFY name; 1 when the rune was a random one (RemoveRune then drops a random rune)
+
+	// rules needs: OZ members and methods client.cpp and the gamerules use. Names from the 1.7 source
+	// where it has them; the player package owns them (and whether they are saved).
+	class CGrappleBolt* pGrappleBolt; // orig +0x638 (1.7 name)
+	int m_iStart;					  // orig +0x644: "Observer Mode" hint timer. VERIFY name (1.7's m_iStart showed the "Fire ... to begin" hint)
+	int m_iCommands;				  // orig +0x648: "Type help" hint, then the oz_line1/oz_line2 lines (1.7 name)
+	int m_iOz;						  // orig +0x64c: version line "Oz Deathmatch v3.02" (1.7 name)
+	int m_iMOTDTimer;				  // orig +0x650: MOTD at 25. VERIFY name
+	int m_iNameCheckTimer;			  // orig +0x654: PlayerMessage for a default name at 25. VERIFY name
+	int m_iObserver;				  // orig +0x658: 1 while in OZ's observer mode (StartObserver/StopObserver). VERIFY name
+	int m_iSpawnProtect;			  // orig +0x660: frames of spawn protection (120, or the first attack). VERIFY name
+	int m_iFirst;					  // orig +0x668: first spawn done, OZ observer intro (1.7 name)
+	int wassuicide;					  // orig +0x670: booby trap rune suicide (1.7 name)
+	int m_iBotFovCheck;				  // orig +0x698: cheat probe, zeroed by the "bot_fov" command (DetectCheats). VERIFY name
+	int m_iWallhackCheck;			  // orig +0x69c: cheat probe, zeroed by "enable_wallhack". VERIFY name
+	void RemoveRune();				  // orig 0xfbc80 (player.cpp)
+	void Teleport();				  // orig 0xfc630 (player.cpp)
+	void MOTD(edict_t* client);		  // orig 0xfb470 (player.cpp)
+	void PlayerMessage(edict_t* client); // orig 0xfc1f0 (player.cpp)
 };
 
 inline void CBasePlayer::SetWeaponBit(int id)

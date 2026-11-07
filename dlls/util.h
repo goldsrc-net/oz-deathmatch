@@ -588,6 +588,8 @@ private:
 void UTIL_SetGroupTrace(int groupmask, int op);
 void UTIL_UnsetGroupTrace();
 
+void UTIL_GetNextBestWeapon(CBasePlayer* pPlayer, CBasePlayerItem* pCurrentWeapon);
+
 int UTIL_SharedRandomLong(unsigned int seed, int low, int high);
 float UTIL_SharedRandomFloat(unsigned int seed, float low, float high);
 

@@ -16,6 +16,7 @@
 #pragma once
 
 inline int gmsgShake = 0;
+inline int gmsgSelAmmo = 0; // Oz: the original still registers SDK 2.x's SelAmmo (sent by nothing)
 inline int gmsgFade = 0;
 inline int gmsgFlashlight = 0;
 inline int gmsgFlashBattery = 0;

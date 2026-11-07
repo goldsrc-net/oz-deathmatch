@@ -23,6 +23,7 @@
 #include "gamerules.h"
 #include "teamplay_gamerules.h"
 #include "game.h"
+#include "items.h"
 #include "UserMessages.h"
 
 //TODO: these should be members of CHalfLifeTeamplay
@@ -69,6 +70,7 @@ CHalfLifeTeamplay::CHalfLifeTeamplay()
 #include "voice_gamemgr.h"
 extern CVoiceGameMgr g_VoiceGameMgr;
 
+// orig 0x114270
 void CHalfLifeTeamplay::Think()
 {
 	///// Check game rules /////
@@ -141,6 +143,7 @@ void CHalfLifeTeamplay::Think()
 // the user has typed a command which is unrecognized by everything else;
 // this check to see if the gamerules knows anything about the command
 //=========================================================
+// orig 0x114460
 bool CHalfLifeTeamplay::ClientCommand(CBasePlayer* pPlayer, const char* pcmd)
 {
 	if (g_VoiceGameMgr.ClientCommand(pPlayer, pcmd))
@@ -161,6 +164,7 @@ bool CHalfLifeTeamplay::ClientCommand(CBasePlayer* pPlayer, const char* pcmd)
 	return false;
 }
 
+// orig 0x114650
 void CHalfLifeTeamplay::UpdateGameMode(CBasePlayer* pPlayer)
 {
 	MESSAGE_BEGIN(MSG_ONE, gmsgGameMode, NULL, pPlayer->edict());
@@ -169,6 +173,7 @@ void CHalfLifeTeamplay::UpdateGameMode(CBasePlayer* pPlayer)
 }
 
 
+// orig 0x1146b0
 const char* CHalfLifeTeamplay::SetDefaultPlayerTeam(CBasePlayer* pPlayer)
 {
 	// copy out the team name from the model
@@ -200,11 +205,14 @@ const char* CHalfLifeTeamplay::SetDefaultPlayerTeam(CBasePlayer* pPlayer)
 //=========================================================
 // InitHUD
 //=========================================================
+// orig 0x1147a0. The original calls TeamWithFewestPlayers() where SDK 2.3 calls SetDefaultPlayerTeam,
+// and drops the result; CBasePlayer::Spawn has already set the team. VERIFY: literal reading of the call
+// at 0x1147bc.
 void CHalfLifeTeamplay::InitHUD(CBasePlayer* pPlayer)
 {
 	int i;
 
-	SetDefaultPlayerTeam(pPlayer);
+	TeamWithFewestPlayers();
 	CHalfLifeMultiplay::InitHUD(pPlayer);
 
 	// Send down the team names
@@ -250,6 +258,7 @@ void CHalfLifeTeamplay::InitHUD(CBasePlayer* pPlayer)
 }
 
 
+// orig 0x114a60
 void CHalfLifeTeamplay::ChangePlayerTeam(CBasePlayer* pPlayer, const char* pTeamName, bool bKill, bool bGib)
 {
 	int damageFlags = DMG_GENERIC;
@@ -301,6 +310,7 @@ void CHalfLifeTeamplay::ChangePlayerTeam(CBasePlayer* pPlayer, const char* pTeam
 //=========================================================
 // ClientUserInfoChanged
 //=========================================================
+// orig 0x114cc0
 void CHalfLifeTeamplay::ClientUserInfoChanged(CBasePlayer* pPlayer, char* infobuffer)
 {
 	char text[1024];
@@ -352,6 +362,7 @@ void CHalfLifeTeamplay::ClientUserInfoChanged(CBasePlayer* pPlayer, char* infobu
 //=========================================================
 // Deathnotice.
 //=========================================================
+// orig 0x114fe0
 void CHalfLifeTeamplay::DeathNotice(CBasePlayer* pVictim, entvars_t* pKiller, entvars_t* pevInflictor)
 {
 	if (m_DisableDeathMessages)
@@ -380,6 +391,7 @@ void CHalfLifeTeamplay::DeathNotice(CBasePlayer* pVictim, entvars_t* pKiller, en
 
 //=========================================================
 //=========================================================
+// orig 0x115130
 void CHalfLifeTeamplay::PlayerKilled(CBasePlayer* pVictim, entvars_t* pKiller, entvars_t* pInflictor)
 {
 	if (!m_DisableDeathPenalty)
@@ -393,11 +405,13 @@ void CHalfLifeTeamplay::PlayerKilled(CBasePlayer* pVictim, entvars_t* pKiller, e
 //=========================================================
 // IsTeamplay
 //=========================================================
+// orig 0x115180
 bool CHalfLifeTeamplay::IsTeamplay()
 {
 	return true;
 }
 
+// orig 0x115190
 bool CHalfLifeTeamplay::FPlayerCanTakeDamage(CBasePlayer* pPlayer, CBaseEntity* pAttacker)
 {
 	if (pAttacker && PlayerRelationship(pPlayer, pAttacker) == GR_TEAMMATE)
@@ -415,6 +429,7 @@ bool CHalfLifeTeamplay::FPlayerCanTakeDamage(CBasePlayer* pPlayer, CBaseEntity* 
 
 //=========================================================
 //=========================================================
+// orig 0x115220
 int CHalfLifeTeamplay::PlayerRelationship(CBaseEntity* pPlayer, CBaseEntity* pTarget)
 {
 	// half life multiplay has a simple concept of Player Relationships.
@@ -432,6 +447,7 @@ int CHalfLifeTeamplay::PlayerRelationship(CBaseEntity* pPlayer, CBaseEntity* pTa
 
 //=========================================================
 //=========================================================
+// orig 0x1152c0
 bool CHalfLifeTeamplay::ShouldAutoAim(CBasePlayer* pPlayer, edict_t* target)
 {
 	// always autoaim, unless target is a teammate
@@ -447,22 +463,35 @@ bool CHalfLifeTeamplay::ShouldAutoAim(CBasePlayer* pPlayer, edict_t* target)
 
 //=========================================================
 //=========================================================
+// orig 0x115350. OZ: points_per_kill, minus points_per_teamkill for a teammate, plus frag_rune_value
+// with the Frag Rune. With no attacker the original returns points_per_kill (SDK: 1).
 int CHalfLifeTeamplay::IPointsForKill(CBasePlayer* pAttacker, CBasePlayer* pKilled)
 {
 	if (!pKilled)
 		return 0;
 
-	if (!pAttacker)
-		return 1;
+	float flPoints = oz_pointsperkill.value;
 
-	if (pAttacker != pKilled && PlayerRelationship(pAttacker, pKilled) == GR_TEAMMATE)
-		return -1;
+	if (pAttacker)
+	{
+		if (pAttacker != pKilled && PlayerRelationship(pAttacker, pKilled) == GR_TEAMMATE)
+		{
+			flPoints = -oz_pointsperteamkill.value;
+		}
+		else
+		{
+			flPoints = oz_pointsperkill.value;
+			if (pAttacker->m_iRune == RUNE_FRAG && PlayerRelationship(pAttacker, pKilled) != GR_TEAMMATE)
+				flPoints = oz_pointsperkill.value + oz_fragruneamount.value;
+		}
+	}
 
-	return 1;
+	return (int)flPoints;
 }
 
 //=========================================================
 //=========================================================
+// orig 0x115420
 const char* CHalfLifeTeamplay::GetTeamID(CBaseEntity* pEntity)
 {
 	if (pEntity == NULL || pEntity->pev == NULL)
@@ -473,6 +502,7 @@ const char* CHalfLifeTeamplay::GetTeamID(CBaseEntity* pEntity)
 }
 
 
+// orig 0x115470
 int CHalfLifeTeamplay::GetTeamIndex(const char* pTeamName)
 {
 	if (pTeamName && *pTeamName != 0)
@@ -489,6 +519,7 @@ int CHalfLifeTeamplay::GetTeamIndex(const char* pTeamName)
 }
 
 
+// orig 0x1154e0
 const char* CHalfLifeTeamplay::GetIndexedTeamName(int teamIndex)
 {
 	if (teamIndex < 0 || teamIndex >= num_teams)
@@ -498,6 +529,7 @@ const char* CHalfLifeTeamplay::GetIndexedTeamName(int teamIndex)
 }
 
 
+// orig 0x115530
 bool CHalfLifeTeamplay::IsValidTeam(const char* pTeamName)
 {
 	if (!m_teamLimit) // Any team is valid if the teamlist isn't set
@@ -506,6 +538,7 @@ bool CHalfLifeTeamplay::IsValidTeam(const char* pTeamName)
 	return (GetTeamIndex(pTeamName) != -1) ? true : false;
 }
 
+// orig 0x115580
 const char* CHalfLifeTeamplay::TeamWithFewestPlayers()
 {
 	int i;
@@ -544,6 +577,7 @@ const char* CHalfLifeTeamplay::TeamWithFewestPlayers()
 
 //=========================================================
 //=========================================================
+// orig 0x115680
 void CHalfLifeTeamplay::RecountTeams(bool bResendInfo)
 {
 	char* pName;

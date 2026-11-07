@@ -264,6 +264,9 @@ public:
 	// world needs: (bot_nav.cpp's, orig 0x08d5e0; the bots package declares it in its own block,
 	// so this one goes at the merge)
 	void InitNavArray();
+	// rules needs: RhoBot's navigation array (bot_nav.cpp, the bots package)
+	void MarkLocationFavorable(Vector& vecLocation); // orig 0x8d6f0
+	void SaveNavToFile();							 // orig 0x8d850
 };
 
 //=========================================================

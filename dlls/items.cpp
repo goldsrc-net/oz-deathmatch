@@ -915,6 +915,3 @@ void CItem::RuneHud(CBasePlayer* pPlayer, const char* pszText)
 	pPlayer->m_iRuneHudTime = 700;
 }
 
-// TEMP STUB (items): real one belongs in client.cpp (VERIFY: the defining file; ServerActivate,
-// client.cpp, counts the starts into it)
-int NumPlayerStarts = 0;

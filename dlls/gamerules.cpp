@@ -107,6 +107,7 @@ bool CGameRules::GetNextBestWeapon(CBasePlayer* pPlayer, CBasePlayerItem* pCurre
 
 //=========================================================
 //=========================================================
+// orig 0xbf730
 bool CGameRules::CanHaveAmmo(CBasePlayer* pPlayer, const char* pszAmmoName, int iMaxCarry)
 {
 	int iAmmoIndex;
@@ -130,6 +131,7 @@ bool CGameRules::CanHaveAmmo(CBasePlayer* pPlayer, const char* pszAmmoName, int 
 
 //=========================================================
 //=========================================================
+// orig 0xbf780
 edict_t* CGameRules::GetPlayerSpawnSpot(CBasePlayer* pPlayer)
 {
 	edict_t* pentSpawnSpot = EntSelectSpawnPoint(pPlayer);
@@ -146,6 +148,7 @@ edict_t* CGameRules::GetPlayerSpawnSpot(CBasePlayer* pPlayer)
 
 //=========================================================
 //=========================================================
+// orig 0xbf890
 bool CGameRules::CanHavePlayerItem(CBasePlayer* pPlayer, CBasePlayerItem* pWeapon)
 {
 	// only living players can have items
@@ -180,6 +183,7 @@ bool CGameRules::CanHavePlayerItem(CBasePlayer* pPlayer, CBasePlayerItem* pWeapo
 //=========================================================
 // load the SkillData struct with the proper values based on the skill level.
 //=========================================================
+// orig 0xbf930
 void CGameRules::RefreshSkillData()
 {
 	int iSkill;
@@ -344,7 +348,9 @@ void CGameRules::RefreshSkillData()
 	gSkillData.monDmgHornet = GetSkillCvar("sk_hornet_dmg");
 
 	// PLAYER HORNET
-	gSkillData.plrDmgHornet = GetSkillCvar("sk_plr_hornet_dmg");
+	// The original's fixed 7 (SDK 2.3). halflife-updated's sk_plr_hornet_dmg cvar (460802c) is a new
+	// feature, so the original wins; multiplayer overrides it with 10 in CHalfLifeMultiplay::RefreshSkillData.
+	gSkillData.plrDmgHornet = 7;
 
 
 	// HEALTH/CHARGE
@@ -373,9 +379,11 @@ void CGameRules::RefreshSkillData()
 // instantiate the proper game rules object
 //=========================================================
 
+// orig 0xc0160. The original runs no game.cfg (Valve's 2013 seed added it); SERVER_EXECUTE runs
+// what CWorld::Precache queued (maps/<map>.cfg). The busters branch is halflife-updated's (sv_busters is
+// kept, reference/DEVIATIONS.md).
 CGameRules* InstallGameRules()
 {
-	SERVER_COMMAND("exec game.cfg\n");
 	SERVER_EXECUTE();
 
 	if (1 == sv_busters.value)
@@ -391,7 +399,7 @@ CGameRules* InstallGameRules()
 	}
 	else
 	{
-		if (teamplay.value > 0)
+		if (CVAR_GET_FLOAT("mp_teamplay") == 1) // the original reads the cvar by name and wants exactly 1
 		{
 			// teamplay
 
