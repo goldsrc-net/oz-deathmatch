@@ -25,6 +25,14 @@ target_sources(hl PRIVATE
 	bigmomma.cpp
 	bloater.cpp
 	bmodels.cpp
+	bot_ai.cpp
+	bot_chat.cpp
+	bot_fightstyle.cpp
+	bot_memory.cpp
+	bot_misc.cpp
+	bot_move.cpp
+	bot_nav.cpp
+	bot_stats.cpp
 	bullsquid.cpp
 	buttons.cpp
 	cbase.cpp
@@ -38,6 +46,7 @@ target_sources(hl PRIVATE
 	effects.cpp
 	egon.cpp
 	explode.cpp
+	flyingcrowbar.cpp
 	flyingmonster.cpp
 	func_break.cpp
 	func_tank.cpp
@@ -48,6 +57,7 @@ target_sources(hl PRIVATE
 	genericmonster.cpp
 	ggrenade.cpp
 	gman.cpp
+	grapple.cpp
 	handgrenade.cpp
 	hassassin.cpp
 	headcrab.cpp
