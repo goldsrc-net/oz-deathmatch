@@ -12,11 +12,12 @@ The script: start hlds_linux (no breakpad, developer 1, LAN), wait for the map, 
 console command in SCRIPT after its delay, end with "quit", and wait for the exit. Commands go
 in on stdin, which HLDS reads as console input.
 
-Rig: ~/Containers/hlds/hlds-linux32-test (32-bit ReHLDS), set up by tools/rig/setup.sh.
+Rig: ~/Containers/hlds/hlds-linux32-test (32-bit ReHLDS; RIG overrides it, as in setup.sh), set up
+by tools/rig/setup.sh.
 """
 import argparse, os, re, subprocess, sys, threading, time
 
-RIG = os.path.expanduser("~/Containers/hlds/hlds-linux32-test")
+RIG = os.environ.get("RIG") or os.path.expanduser("~/Containers/hlds/hlds-linux32-test")
 HERE = os.path.dirname(os.path.abspath(__file__))
 LIB = os.path.join(HERE, "lib")
 

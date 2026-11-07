@@ -26,11 +26,11 @@ worktree. The bar is identical behavior. Exact binary layout is NOT a goal.
 - **The binary** for when the decompile is unclear: `objdump -d --no-show-raw-insn -C
   --start-address=0x<a> --stop-address=0x<b> reference/hl_i386.so`. Ghidra address = file address
   + 0x10000 (funcfile.tsv has file addresses).
-- **The OZ 1.7 source** (`~/Packages/OZDM`, read-only): AfterShock's own release of an earlier
+- **The OZ 1.7 source** (nekonomicon/OZDM, read-only): AfterShock's own release of an earlier
   version, every OZ change marked `// Oz`. Use it for names, comments and intent where 3.02 still
   has the same code; the 3.02 binary decides what the code does. 1.7 has no bots.
-- **The 3.02 content** (cfg, bot and map files the code reads):
-  `/media/Data3/Projects/mods/oz/x-oz3-02_for_steam/SteamApps/YOUR_steam_username/half-life/oz/`.
+- **The 3.02 content** (cfg, bot and map files the code reads): the `oz/` folder of the 3.02 Steam
+  server package (`reference/README.md`).
 
 ## Reading the decompile
 

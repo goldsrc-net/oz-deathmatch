@@ -27,8 +27,10 @@ Set up or refresh with `tools/rig/setup.sh` after `scripts/build.sh i386`. It co
 - Server-side change from stock 3.02: `sv_cheats 1` in `cfg/multiplayer.cfg`, which GameDLLInit
   runs after the command line. Everything else is the release as shipped.
 
-The content comes from the 3.02 Steam server package unpacked on Data3 (`OZ_SRC` in setup.sh;
-`reference/README.md` has where it was downloaded).
+The content comes from the 3.02 Steam server package's `oz/` folder (`OZ_SRC`, default
+`oz3-02_for_steam.zip` unpacked in `~/Downloads/oz3-02_for_steam`; `reference/README.md` has where
+it was downloaded). The rig paths above are setup.sh's defaults; `RIG`, `RIG2` and `CLIENT` override
+them.
 
 ## The original's C++ runtime
 

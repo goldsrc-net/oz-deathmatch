@@ -3,14 +3,15 @@
 # and the client folder to join them with. Idempotent: re-running refreshes our hl.so and
 # leaves everything else alone. Undo: tools/rig/README.md.
 #
-#   tools/rig/setup.sh      needs the 3.02 Steam server package unpacked (OZ_SRC, below),
+#   tools/rig/setup.sh      needs the oz/ folder of the 3.02 Steam server package (OZ_SRC, default
+#                           oz3-02_for_steam.zip unpacked in ~/Downloads/oz3-02_for_steam),
 #                           build-i386/dlls/hl.so (scripts/build.sh i386), and the 32-bit rig below
 #
 # Rig: ~/Containers/hlds/hlds-linux32-test, a 32-bit ReHLDS install with valve/ content.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-SRC="${OZ_SRC:-/media/Data3/Projects/mods/oz/x-oz3-02_for_steam/SteamApps/YOUR_steam_username/half-life/oz}"
+SRC="${OZ_SRC:-$HOME/Downloads/oz3-02_for_steam/SteamApps/YOUR_steam_username/half-life/oz}"
 RIG="${RIG:-$HOME/Containers/hlds/hlds-linux32-test}"     # runs the original, port 27041
 RIG2="${RIG2:-$HOME/Containers/hlds/hlds-linux32-ozours}" # runs ours, port 27042
 CLIENT="${CLIENT:-$HOME/.local/share/Steam/steamapps/common/Half-Life}"

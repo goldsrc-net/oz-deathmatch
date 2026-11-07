@@ -19,7 +19,7 @@ de580e01be665d7d2f88b09648dc70b3  mp_i386.so
 ## Provenance
 
 Downloaded 2026-11-07 from the sparksonline.org mirror that the official download page
-(http://ozdeathmatch.com/download.html) links, into `/media/Data3/Projects/mods/oz/downloads/`:
+(http://ozdeathmatch.com/download.html) links:
 
 ```
 fbaa9200c88065590744b0738bfd5e6c9843b567f702443cf305be64e79e0d18  oz_3.02.tar.gz          hl_i386.so ("3.02 update for Linux Servers using Steam")
@@ -30,10 +30,9 @@ fbaa9200c88065590744b0738bfd5e6c9843b567f702443cf305be64e79e0d18  oz_3.02.tar.gz
 ff02f232f4719817eec88710f38f07f172bc6dafec6c7ff7209700f2087563fc  links.txt               the mirror's own list
 ```
 
-The 3.02 Windows DLL in the Win32 update and in the Steam package are byte-identical. Each archive
-is unpacked beside `downloads/` as `x-<name>/`.
+The 3.02 Windows DLL in the Win32 update and in the Steam package are byte-identical.
 
 The OZ 1.7 source the page links (FilePlanet's `Oz17src.zip`, gone) is mirrored on GitHub as
-nekonomicon/OZDM (`~/Packages/OZDM`): AfterShock Productions' own release, every OZ change marked
+nekonomicon/OZDM: AfterShock Productions' own release, every OZ change marked
 `// Oz`. Its readme gives everyone use of it on two terms: credit Oz Deathmatch for what is used,
 and don't release modifications under the Oz name.

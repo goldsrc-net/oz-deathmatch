@@ -237,8 +237,8 @@ Refactors, formatting, warnings and build commits in the same log are not listed
 
 No new classes. `CPlayerMonster` (base `CBaseMonster`, from `hierarchy.tsv`) has no members of its
 own and no new virtuals (`vtables.py --new`: none). Saved members: every save table in these files
-now matches `reference/savefields.tsv` in names, order, counts and global flags (checked by
-`~/stignored/ozdm-world/savecmp.py`), except the bool fields above (FIELD_BOOLEAN for halflife-updated's
+now matches `reference/savefields.tsv` in names, order, counts and global flags (checked with a
+one-off script), except the bool fields above (FIELD_BOOLEAN for halflife-updated's
 bool members where the original has FIELD_INTEGER) and `CGamePlayerEquip`, which the original doesn't
 save (halflife-updated's c20feca, kept). `CEnvSound`'s room type (orig +0x68, the
 original's float `m_flRoomtype`) stays halflife-updated's `int m_Roomtype` (fdc159c), as in both RC projects. No unsaved members were added.
