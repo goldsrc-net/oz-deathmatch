@@ -54,3 +54,7 @@ site links (`/media/Data3/Projects/mods/oz/downloads/`).
   (`CBaseBot`, `CGrappleBolt`, `CFlyingCrowbar`, `CRune`) each go with their file.
 - Next: section 6, the packages (`reference/dossiers/AGENT_BRIEF.md`). The 1.7 source's `// Oz`
   markers say which stock functions OZ changed.
+- Later (Steven, 2026-11-07): once it runs against the original, a cleanup pass fixes OZ's own
+  bugs, one commit each (`Fix original bug: ...`), with anything that changes play put to Steven
+  first; the same pass runs in mod-rockcrowbar and mod-rc2. Until then original bugs are kept and
+  listed, except crashes, which are fixed (`reference/DEVIATIONS.md`).
