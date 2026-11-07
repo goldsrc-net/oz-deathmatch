@@ -111,8 +111,11 @@ float CFlyingMonster::ChangeYaw(int yawSpeed)
 		if (delta > 0.25f)
 			delta = 0.25f;
 
-		float speed = 220.0f * delta;
-		pev->angles.z = UTIL_Approach(target, pev->angles.z, 220.0 * speed);
+		// halflife-updated's fix, kept (Steven, 2026-11-07; its 343bbb2, halflife#2458): the roll steps by
+		// the time since the last call, not the server frame. Its later HL25 backport (95fdebe) made the
+		// step 220 * 220 * delta, a bug of its own; this is 343bbb2's 220 * delta. The original:
+		// 220 * frametime.
+		pev->angles.z = UTIL_Approach(target, pev->angles.z, 220.0 * delta);
 	}
 	return CBaseMonster::ChangeYaw(yawSpeed);
 }

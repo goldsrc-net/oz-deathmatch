@@ -143,6 +143,9 @@ protected:
 
 TYPEDESCRIPTION CFuncTank::m_SaveData[] =
 	{
+		DEFINE_FIELD(CFuncTank, m_pController, FIELD_CLASSPTR), // the original's order
+		DEFINE_FIELD(CFuncTank, m_flNextAttack, FIELD_TIME),
+		DEFINE_FIELD(CFuncTank, m_vecControllerUsePos, FIELD_VECTOR),
 		DEFINE_FIELD(CFuncTank, m_yawCenter, FIELD_FLOAT),
 		DEFINE_FIELD(CFuncTank, m_yawRate, FIELD_FLOAT),
 		DEFINE_FIELD(CFuncTank, m_yawRange, FIELD_FLOAT),
@@ -162,12 +165,9 @@ TYPEDESCRIPTION CFuncTank::m_SaveData[] =
 		DEFINE_FIELD(CFuncTank, m_iszSpriteSmoke, FIELD_STRING),
 		DEFINE_FIELD(CFuncTank, m_iszSpriteFlash, FIELD_STRING),
 		DEFINE_FIELD(CFuncTank, m_bulletType, FIELD_INTEGER),
+		DEFINE_FIELD(CFuncTank, m_iBulletDamage, FIELD_INTEGER),
 		DEFINE_FIELD(CFuncTank, m_sightOrigin, FIELD_VECTOR),
 		DEFINE_FIELD(CFuncTank, m_spread, FIELD_INTEGER),
-		DEFINE_FIELD(CFuncTank, m_pController, FIELD_CLASSPTR),
-		DEFINE_FIELD(CFuncTank, m_vecControllerUsePos, FIELD_VECTOR),
-		DEFINE_FIELD(CFuncTank, m_flNextAttack, FIELD_TIME),
-		DEFINE_FIELD(CFuncTank, m_iBulletDamage, FIELD_INTEGER),
 		DEFINE_FIELD(CFuncTank, m_iszMaster, FIELD_STRING),
 };
 
@@ -368,6 +368,7 @@ bool CFuncTank::StartControl(CBasePlayer* pController)
 	{
 		m_pController->m_pActiveItem->Holster();
 		m_pController->pev->weaponmodel = 0;
+		// halflife-updated's fix, kept: the view model goes too, so the holstered weapon isn't shown
 		m_pController->pev->viewmodel = 0;
 	}
 
@@ -385,6 +386,8 @@ void CFuncTank::StopControl()
 	if (!m_pController)
 		return;
 
+	// halflife-updated's fix, kept: EquipWeapon deploys the weapon only when it can, else switches to
+	// the next best, so an empty weapon doesn't come back invisible (halflife-updated #134)
 	m_pController->EquipWeapon();
 
 	ALERT(at_console, "stopped using TANK\n");

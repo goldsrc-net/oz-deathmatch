@@ -141,8 +141,6 @@ LINK_ENTITY_TO_CLASS(ambient_generic, CAmbientGeneric);
 TYPEDESCRIPTION CAmbientGeneric::m_SaveData[] =
 	{
 		DEFINE_FIELD(CAmbientGeneric, m_flAttenuation, FIELD_FLOAT),
-		DEFINE_FIELD(CAmbientGeneric, m_fActive, FIELD_BOOLEAN),
-		DEFINE_FIELD(CAmbientGeneric, m_fLooping, FIELD_BOOLEAN),
 
 		// HACKHACK - This is not really in the spirit of the save/restore design, but save this
 		// out as a binary data block.  If the dynpitchvol_t is changed, old saved games will NOT
@@ -150,6 +148,8 @@ TYPEDESCRIPTION CAmbientGeneric::m_SaveData[] =
 		// The right way to do this is to split the input parms (read in keyvalue) into members and re-init this
 		// struct in Precache(), but it's unlikely that the struct will change, so it's not worth the time right now.
 		DEFINE_ARRAY(CAmbientGeneric, m_dpv, FIELD_CHARACTER, sizeof(dynpitchvol_t)),
+		DEFINE_FIELD(CAmbientGeneric, m_fActive, FIELD_BOOLEAN), // the original's order: after m_dpv
+		DEFINE_FIELD(CAmbientGeneric, m_fLooping, FIELD_BOOLEAN),
 };
 
 IMPLEMENT_SAVERESTORE(CAmbientGeneric, CBaseEntity);
@@ -846,14 +846,14 @@ public:
 	static TYPEDESCRIPTION m_SaveData[];
 
 	float m_flRadius;
-	int m_Roomtype;
+	float m_flRoomtype; // the original's name and type; halflife-updated's fdc159c made it int m_Roomtype
 };
 
 LINK_ENTITY_TO_CLASS(env_sound, CEnvSound);
 TYPEDESCRIPTION CEnvSound::m_SaveData[] =
 	{
 		DEFINE_FIELD(CEnvSound, m_flRadius, FIELD_FLOAT),
-		DEFINE_FIELD(CEnvSound, m_Roomtype, FIELD_INTEGER),
+		DEFINE_FIELD(CEnvSound, m_flRoomtype, FIELD_FLOAT),
 };
 
 IMPLEMENT_SAVERESTORE(CEnvSound, CBaseEntity);
@@ -869,7 +869,7 @@ bool CEnvSound::KeyValue(KeyValueData* pkvd)
 	}
 	if (FStrEq(pkvd->szKeyName, "roomtype"))
 	{
-		m_Roomtype = atoi(pkvd->szValue);
+		m_flRoomtype = atof(pkvd->szValue);
 		return true;
 	}
 
@@ -911,8 +911,12 @@ bool FEnvSoundInRange(CEnvSound* pSound, entvars_t* pevTarget, float& flRange)
 
 // CONSIDER: if player in water state, autoset roomtype to 14,15 or 16.
 
-void CEnvSound::Think()
+void CEnvSound::Think() // orig 0x10a6b0
 {
+	// halflife-updated's fix, kept (bc3add9, halflife#1144 #2936): the room type goes to the client from
+	// CBasePlayer::UpdateClientData whenever it changes, and losing range clears the player's sound
+	// entity instead of its room type. The original sent SVC_ROOMTYPE here and zeroed the room type, so
+	// a level change or a reconnect left the client with a stale one.
 	const bool shouldThinkFast = [this]()
 	{
 		// get pointer to client if visible; FIND_CLIENT_IN_PVS will
@@ -963,7 +967,7 @@ void CEnvSound::Think()
 			{
 				// new entity is closer to player, so it wins.
 				pPlayer->m_SndLast = this;
-				pPlayer->m_SndRoomtype = m_Roomtype;
+				pPlayer->m_SndRoomtype = (int)m_flRoomtype; // the original wrote (short)m_flRoomtype to the client
 				pPlayer->m_flSndRange = flRange;
 
 				// New room type is sent to player in CBasePlayer::UpdateClientData.

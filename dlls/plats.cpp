@@ -661,8 +661,8 @@ public:
 LINK_ENTITY_TO_CLASS(func_train, CFuncTrain);
 TYPEDESCRIPTION CFuncTrain::m_SaveData[] =
 	{
+		DEFINE_FIELD(CFuncTrain, m_pevCurrentTarget, FIELD_EVARS), // the original's order
 		DEFINE_FIELD(CFuncTrain, m_sounds, FIELD_INTEGER),
-		DEFINE_FIELD(CFuncTrain, m_pevCurrentTarget, FIELD_EVARS),
 		DEFINE_FIELD(CFuncTrain, m_activated, FIELD_BOOLEAN),
 };
 
@@ -1135,6 +1135,8 @@ void CFuncTrackTrain::UpdateSound()
 	if (FStringNull(pev->noise))
 		return;
 
+	// halflife-updated's fix, kept: fabs where the original called the C abs() on a float, which
+	// truncated the speed to int (e19fe47)
 	flpitch = TRAIN_STARTPITCH + (fabs(pev->speed) * (TRAIN_MAXPITCH - TRAIN_STARTPITCH) / TRAIN_MAXSPEED);
 
 	if (!m_soundPlaying)

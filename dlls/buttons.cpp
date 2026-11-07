@@ -280,12 +280,12 @@ TYPEDESCRIPTION CBaseButton::m_SaveData[] =
 		DEFINE_FIELD(CBaseButton, m_fStayPushed, FIELD_BOOLEAN),
 		DEFINE_FIELD(CBaseButton, m_fRotating, FIELD_BOOLEAN),
 
-		DEFINE_FIELD(CBaseButton, m_sounds, FIELD_INTEGER),
+		DEFINE_FIELD(CBaseButton, m_strChangeTarget, FIELD_STRING), // the original's order
 		DEFINE_FIELD(CBaseButton, m_bLockedSound, FIELD_CHARACTER),
 		DEFINE_FIELD(CBaseButton, m_bLockedSentence, FIELD_CHARACTER),
 		DEFINE_FIELD(CBaseButton, m_bUnlockedSound, FIELD_CHARACTER),
 		DEFINE_FIELD(CBaseButton, m_bUnlockedSentence, FIELD_CHARACTER),
-		DEFINE_FIELD(CBaseButton, m_strChangeTarget, FIELD_STRING),
+		DEFINE_FIELD(CBaseButton, m_sounds, FIELD_INTEGER),
 		//	DEFINE_FIELD( CBaseButton, m_ls, FIELD_??? ),   // This is restored in Precache()
 };
 
@@ -666,6 +666,9 @@ void DoSpark(entvars_t* pev, const Vector& location)
 void CBaseButton::ButtonSpark()
 {
 	SetThink(&CBaseButton::ButtonSpark);
+	// halflife-updated's fix, kept: a button thinks on pev->ltime, so the next spark is timed on it
+	// (halflife #1681), and the spark is at the button (absmin), not near the world origin (mins,
+	// halflife #3269)
 	pev->nextthink = pev->ltime + (0.1 + RANDOM_FLOAT(0, 1.5)); // spark again at random interval
 
 	DoSpark(pev, pev->absmin);
@@ -885,6 +888,8 @@ void CBaseButton::ButtonBackHome()
 		SetTouch(&CBaseButton::ButtonTouch);
 
 	// reset think for a sparking button
+	// halflife-updated's fix, kept: func_rot_button's X Axis flag is the spark bit, so it doesn't
+	// start sparking (halflife #3270), and the spark is timed on pev->ltime (halflife #1681)
 	//func_rot_button's X Axis spawnflag overlaps with this one so don't use it here.
 	if (!FClassnameIs(pev, "func_rot_button") && FBitSet(pev->spawnflags, SF_BUTTON_SPARK_IF_OFF))
 	{
@@ -1086,6 +1091,8 @@ void CMomentaryRotButton::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE
 
 	UpdateAllButtons(pev->ideal_yaw, true);
 
+	// halflife-updated's fix, kept: the target gets the value of the destination angle, so a
+	// retrigger doesn't send it the wrong way (SDK 2.2+; the original sent the current one)
 	// Calculate destination angle and use it to predict value, this prevents sending target in wrong direction on retriggering
 	Vector dest = pev->angles + pev->avelocity * (pev->nextthink - pev->ltime);
 	float value1 = CBaseToggle::AxisDelta(pev->spawnflags, dest, m_start) / m_flMoveDistance;

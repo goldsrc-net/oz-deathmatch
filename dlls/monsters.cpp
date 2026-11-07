@@ -46,6 +46,7 @@ Vector VecBModelOrigin(entvars_t* pevBModel);
 // to just pick a new one when we start up again.
 TYPEDESCRIPTION CBaseMonster::m_SaveData[] =
 	{
+		DEFINE_FIELD(CBaseMonster, m_afConditions, FIELD_INTEGER), // the original's order: first
 		DEFINE_FIELD(CBaseMonster, m_hEnemy, FIELD_EHANDLE),
 		DEFINE_FIELD(CBaseMonster, m_hTargetEnt, FIELD_EHANDLE),
 		DEFINE_ARRAY(CBaseMonster, m_hOldEnemy, FIELD_EHANDLE, MAX_OLD_ENEMIES),
@@ -64,7 +65,6 @@ TYPEDESCRIPTION CBaseMonster::m_SaveData[] =
 		//Schedule_t			*m_pSchedule;
 
 		DEFINE_FIELD(CBaseMonster, m_iScheduleIndex, FIELD_INTEGER),
-		DEFINE_FIELD(CBaseMonster, m_afConditions, FIELD_INTEGER),
 		//WayPoint_t			m_Route[ ROUTE_SIZE ];
 		//	DEFINE_FIELD( CBaseMonster, m_movementGoal, FIELD_INTEGER ),
 		//	DEFINE_FIELD( CBaseMonster, m_iRouteIndex, FIELD_INTEGER ),
@@ -100,7 +100,6 @@ TYPEDESCRIPTION CBaseMonster::m_SaveData[] =
 
 		DEFINE_FIELD(CBaseMonster, m_scriptState, FIELD_INTEGER),
 		DEFINE_FIELD(CBaseMonster, m_pCine, FIELD_CLASSPTR),
-		DEFINE_FIELD(CBaseMonster, m_AllowItemDropping, FIELD_BOOLEAN),
 };
 
 //IMPLEMENT_SAVERESTORE( CBaseMonster, CBaseToggle );
@@ -566,6 +565,8 @@ void CBaseMonster::MonsterThink()
 //=========================================================
 void CBaseMonster::MonsterUse(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value)
 {
+	// halflife-updated's fix, kept: a triggered monster isn't set to alert, which resurrected one
+	// that was dying (halflife #3061, 08975b8); the original sets it
 	//Don't do this because it can resurrect dying monsters
 	//m_IdealMonsterState = MONSTERSTATE_ALERT;
 }
@@ -1216,7 +1217,11 @@ bool CBaseMonster::PopEnemy()
 //=========================================================
 void CBaseMonster::SetActivity(Activity NewActivity)
 {
-	const Activity oldActivity = NewActivity;
+	// halflife-updated's fix, kept (Steven, 2026-11-07; its #176, ec1f016): m_Activity is set before the
+	// sequence, so SetYawSpeed sees the new activity. Its own version saved oldActivity from
+	// NewActivity, a typo that made the walk/run test compare the new activity with itself; the
+	// old one is m_Activity, saved before it changes.
+	const Activity oldActivity = m_Activity;
 
 	m_Activity = NewActivity; // Go ahead and set this so it doesn't keep trying when the anim is not present
 
@@ -2194,7 +2199,9 @@ int CBaseMonster::IRelationship(CBaseEntity* pTarget)
 			/*NONE*/ {R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO},
 			/*MACHINE*/ {R_NO, R_NO, R_DL, R_DL, R_NO, R_DL, R_DL, R_DL, R_DL, R_DL, R_NO, R_DL, R_DL, R_DL},
 			/*PLAYER*/ {R_NO, R_DL, R_NO, R_NO, R_DL, R_DL, R_DL, R_DL, R_DL, R_DL, R_NO, R_NO, R_DL, R_DL},
-			/*HUMANPASSIVE*/ {R_NO, R_NO, R_AL, R_AL, R_HT, R_HT, R_NO, R_HT, R_DL, R_DL, R_NO, R_AL, R_NO, R_NO},
+			// VERIFY (unclear, kept the original's): halflife-updated's 75bf517 makes HUMANPASSIVE hate
+			// ALIENMILITARY and dislike ALIENPREDATOR so scientists flee them; the original fears both.
+			/*HUMANPASSIVE*/ {R_NO, R_NO, R_AL, R_AL, R_HT, R_FR, R_NO, R_HT, R_DL, R_FR, R_NO, R_AL, R_NO, R_NO},
 			/*HUMANMILITAR*/ {R_NO, R_NO, R_HT, R_DL, R_NO, R_HT, R_DL, R_DL, R_DL, R_DL, R_NO, R_HT, R_NO, R_NO},
 			/*ALIENMILITAR*/ {R_NO, R_DL, R_HT, R_DL, R_HT, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_DL, R_NO, R_NO},
 			/*ALIENPASSIVE*/ {R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO, R_NO},
@@ -2527,6 +2534,9 @@ float CBaseMonster::ChangeYaw(int yawSpeed)
 	ideal = pev->ideal_yaw;
 	if (current != ideal)
 	{
+		// halflife-updated's fix, kept: the turn step comes from the time since the last turn, not the
+		// server's frame time, so the turn rate doesn't follow the server's frame rate (halflife #2458,
+		// 343bbb2, 95fdebe). The original: yawSpeed * frametime * 10.
 		if (m_flLastYawTime == 0.0f)
 		{
 			m_flLastYawTime = gpGlobals->time - gpGlobals->frametime;
@@ -2892,6 +2902,8 @@ void CBaseMonster::ReportAIState()
 {
 	ALERT_TYPE level = at_console;
 
+	// halflife-updated's fix, kept: "PlayDead" is in the names, so PLAYDEAD and DEAD print their own
+	// (3dc5750; the original's list was one short)
 	static const char* pStateNames[] = {"None", "Idle", "Combat", "Alert", "Hunt", "Prone", "Scripted", "PlayDead", "Dead"};
 
 	ALERT(level, "%s: ", STRING(pev->classname));
@@ -2981,10 +2993,8 @@ bool CBaseMonster::KeyValue(KeyValueData* pkvd)
 		m_iTriggerCondition = atoi(pkvd->szValue);
 		return true;
 	}
-	else if (FStrEq(pkvd->szKeyName, "allow_item_dropping"))
-	{
-		m_AllowItemDropping = atoi(pkvd->szValue) != 0;
-	}
+	// halflife-updated's "allow_item_dropping" keyvalue (b624a61, a new feature) is left out: the
+	// original has none.
 
 	return CBaseToggle::KeyValue(pkvd);
 }
@@ -3395,11 +3405,6 @@ CBaseEntity* CBaseMonster::DropItem(const char* pszItemName, const Vector& vecPo
 	if (!pszItemName)
 	{
 		ALERT(at_console, "DropItem() - No item name!\n");
-		return nullptr;
-	}
-
-	if (!m_AllowItemDropping)
-	{
 		return nullptr;
 	}
 

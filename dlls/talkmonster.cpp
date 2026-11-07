@@ -480,7 +480,7 @@ void CTalkMonster::RunTask(Task_t* pTask)
 	case TASK_TLK_LOOK_AT_CLIENT:
 	{
 		// Get edict for one player
-		CBaseEntity* pPlayer = UTIL_GetLocalPlayer();
+		CBaseEntity* pPlayer = UTIL_GetLocalPlayer(); // halflife-updated's fix, kept: the player in slot 1 only when that slot holds one (f2c8e23); the original read INDEXENT(1), a free slot's stale origin in multiplayer
 
 		// track head to the client for a while.
 		if (pPlayer &&
@@ -524,7 +524,7 @@ void CTalkMonster::RunTask(Task_t* pTask)
 	case TASK_FACE_PLAYER:
 	{
 		// Get edict for one player
-		CBaseEntity* pPlayer = UTIL_GetLocalPlayer();
+		CBaseEntity* pPlayer = UTIL_GetLocalPlayer(); // halflife-updated's fix, kept: the player in slot 1 only when that slot holds one (f2c8e23); the original read INDEXENT(1), a free slot's stale origin in multiplayer
 
 		if (pPlayer)
 		{
@@ -1178,6 +1178,8 @@ bool CTalkMonster::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, f
 		{
 			CBaseEntity* pFriend = FindNearestFriend(false);
 
+			// halflife-updated's fix, kept: a friend whose deadflag isn't DEAD_NO is skipped, so a
+			// dying friend's death schedule isn't reset (e306d7a)
 			if (pFriend && pFriend->IsAlive() && pFriend->pev->deadflag == DEAD_NO)
 			{
 				// only if not dead or dying!
@@ -1247,7 +1249,7 @@ Schedule_t* CTalkMonster::GetScheduleOfType(int Type)
 
 		if (!IsTalking() && HasConditions(bits_COND_SEE_CLIENT) && RANDOM_LONG(0, 6) == 0)
 		{
-			CBaseEntity* pPlayer = UTIL_GetLocalPlayer();
+			CBaseEntity* pPlayer = UTIL_GetLocalPlayer(); // halflife-updated's fix, kept: the player in slot 1 only when that slot holds one (f2c8e23); the original read INDEXENT(1), a free slot's stale origin in multiplayer
 
 			if (pPlayer)
 			{

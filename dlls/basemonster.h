@@ -109,8 +109,6 @@ public:
 
 	float m_flLastYawTime;
 
-	bool m_AllowItemDropping = true;
-
 	bool Save(CSave& save) override;
 	bool Restore(CRestore& restore) override;
 

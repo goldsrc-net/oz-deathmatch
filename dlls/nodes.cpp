@@ -49,8 +49,10 @@ LINK_ENTITY_TO_CLASS(info_node_air, CNodeEnt);
 // memory currently in use by the world graph, NULLs
 // all pointers, and zeros the node count.
 //=========================================================
-void CGraph::InitGraph()
+void CGraph::InitGraph() // orig 0x0de0c0
 {
+	InitNavArray(); // Oz: the bots' navigation array
+
 
 	// Make the graph unavailable
 	//
@@ -109,8 +111,10 @@ void CGraph::InitGraph()
 // reasonable number of nodes so we can build the path which
 // will be saved to disk.
 //=========================================================
-bool CGraph::AllocNodes()
+bool CGraph::AllocNodes() // orig 0x0de1b0
 {
+	InitNavArray(); // Oz: the bots' navigation array
+
 	//  malloc all of the nodes
 	m_pNodes = (CNode*)calloc(sizeof(CNode), MAX_NODES);
 
@@ -1520,7 +1524,8 @@ void CTestHull::Spawn(entvars_t* pevMasterNode)
 //=========================================================
 void CTestHull::DropDelay()
 {
-	//	UTIL_CenterPrintAll( "Node Graph out of Date. Rebuilding..." );
+	// The original's (SDK 2.3); halflife-updated's seed has it commented out (design, as mod-rc2).
+	UTIL_ClientPrintAll(HUD_PRINTCENTER, "Node Graph out of Date. Rebuilding...");
 
 	UTIL_SetOrigin(pev, WorldGraph.m_pNodes[0].m_vecOrigin);
 
@@ -3644,4 +3649,10 @@ void CNodeViewer::DrawThink()
 
 		m_iDraw++;
 	}
+}
+
+
+// TEMP STUB (world): real one belongs in bot_nav.cpp (CGraph::InitNavArray, orig 0x08d5e0)
+void CGraph::InitNavArray()
+{
 }

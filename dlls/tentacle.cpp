@@ -159,8 +159,8 @@ TYPEDESCRIPTION CTentacle::m_SaveData[] =
 		DEFINE_FIELD(CTentacle, m_flHitTime, FIELD_TIME),
 		DEFINE_FIELD(CTentacle, m_flTapRadius, FIELD_FLOAT),
 		DEFINE_FIELD(CTentacle, m_flNextSong, FIELD_TIME),
+		DEFINE_FIELD(CTentacle, m_flMaxYaw, FIELD_FLOAT), // the original's order
 		DEFINE_FIELD(CTentacle, m_iTapSound, FIELD_INTEGER),
-		DEFINE_FIELD(CTentacle, m_flMaxYaw, FIELD_FLOAT),
 		DEFINE_FIELD(CTentacle, m_vecPrevSound, FIELD_POSITION_VECTOR),
 		DEFINE_FIELD(CTentacle, m_flPrevSoundTime, FIELD_TIME),
 };
@@ -258,6 +258,7 @@ void CTentacle::Spawn()
 	pev->sequence = 0;
 
 	//Always interpolate tentacles since they don't actually move.
+	// halflife-updated's fix, kept (Steven, 2026-11-07; halflife#3228): the client smooths it (AddToFullPack)
 	m_EFlags |= EFLAG_SLERP;
 
 	SET_MODEL(ENT(pev), "models/tentacle2.mdl");

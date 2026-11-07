@@ -1797,7 +1797,7 @@ Vector CBlood::BloodPosition(CBaseEntity* pActivator)
 			pPlayer = pActivator;
 		}
 		else
-			pPlayer = UTIL_GetLocalPlayer();
+			pPlayer = UTIL_GetLocalPlayer(); // halflife-updated's fix, kept: the player in slot 1 only when that slot holds one (f2c8e23); the original read INDEXENT(1), a free slot's stale origin in multiplayer
 		if (pPlayer)
 			return (pPlayer->pev->origin + pPlayer->pev->view_ofs) + Vector(RANDOM_FLOAT(-10, 10), RANDOM_FLOAT(-10, 10), RANDOM_FLOAT(-10, 10));
 	}
@@ -2070,7 +2070,7 @@ void CMessage::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useTy
 			pPlayer = pActivator;
 		else
 		{
-			pPlayer = UTIL_GetLocalPlayer();
+			pPlayer = UTIL_GetLocalPlayer(); // halflife-updated's fix, kept: the player in slot 1 only when that slot holds one (f2c8e23); the original read INDEXENT(1), a free slot's stale origin in multiplayer
 		}
 		if (pPlayer)
 			UTIL_ShowMessage(STRING(pev->message), pPlayer);

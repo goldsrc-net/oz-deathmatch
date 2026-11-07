@@ -693,10 +693,10 @@ void CTriggerCDAudio::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYP
 	PlayTrack();
 }
 
-void PlayCDTrack(int iTrack)
+void PlayCDTrack(int iTrack) // orig 0x119910
 {
 	// manually find the single player.
-	CBaseEntity* pClient = UTIL_GetLocalPlayer();
+	edict_t* pClient = INDEXENT(1); // the original's (SDK 2.3); halflife-updated: UTIL_GetLocalPlayer (f2c8e23, a refactor)
 
 	// Can't play if the client is not connected!
 	if (!pClient)
@@ -710,14 +710,16 @@ void PlayCDTrack(int iTrack)
 
 	if (iTrack == -1)
 	{
-		CLIENT_COMMAND(pClient->edict(), "cd stop\n");
+		// The original's (Steven, 2026-11-07: until today's engine is shown to resume a paused track);
+		// halflife-updated sent "cd stop".
+		CLIENT_COMMAND(pClient, "cd pause\n");
 	}
 	else
 	{
 		char string[64];
 
 		sprintf(string, "cd play %3d\n", iTrack);
-		CLIENT_COMMAND(pClient->edict(), string);
+		CLIENT_COMMAND(pClient, string);
 	}
 }
 
@@ -772,10 +774,10 @@ void CTargetCDAudio::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE
 }
 
 // only plays for ONE client, so only use in single play!
-void CTargetCDAudio::Think()
+void CTargetCDAudio::Think() // orig 0x119c80
 {
 	// manually find the single player.
-	CBaseEntity* pClient = UTIL_GetLocalPlayer();
+	edict_t* pClient = INDEXENT(1); // the original's (SDK 2.3); halflife-updated: UTIL_GetLocalPlayer (f2c8e23, design)
 
 	// Can't play if the client is not connected!
 	if (!pClient)
@@ -783,7 +785,7 @@ void CTargetCDAudio::Think()
 
 	pev->nextthink = gpGlobals->time + 0.5;
 
-	if ((pClient->pev->origin - pev->origin).Length() <= pev->scale)
+	if ((pClient->v.origin - pev->origin).Length() <= pev->scale)
 		Play();
 }
 
@@ -998,6 +1000,7 @@ void CBaseTrigger::HurtTouch(CBaseEntity* pOther)
 	}
 #endif
 
+	// halflife-updated's fix, kept: in multiplayer a dead player isn't healed (6ae5366, HL25)
 	if (fldmg < 0)
 	{
 		bool bApplyHeal = true;
@@ -1426,10 +1429,8 @@ void CChangeLevel::Spawn()
 	if (FStrEq(m_szLandmarkName, ""))
 		ALERT(at_console, "trigger_changelevel to %s doesn't have a landmark", m_szMapName);
 
-	if (0 == stricmp(m_szMapName, STRING(gpGlobals->mapname)))
-	{
-		ALERT(at_error, "trigger_changelevel points to the current map (%s), which does not work\n", STRING(gpGlobals->mapname));
-	}
+	// halflife-updated's error line for a changelevel to the current map (b9adea9) is left out: an
+	// added diagnostic the original doesn't have.
 
 	if (!FStringNull(pev->targetname))
 	{
@@ -1503,7 +1504,7 @@ void CChangeLevel::ChangeLevelNow(CBaseEntity* pActivator)
 	pev->dmgtime = gpGlobals->time;
 
 
-	CBaseEntity* pPlayer = UTIL_GetLocalPlayer();
+	CBaseEntity* pPlayer = UTIL_GetLocalPlayer(); // halflife-updated's fix, kept: the player in slot 1 only when that slot holds one (f2c8e23); the original read INDEXENT(1), a free slot's stale origin in multiplayer
 	if (!InTransitionVolume(pPlayer, m_szLandmarkName))
 	{
 		ALERT(at_aiconsole, "Player isn't in the transition volume %s, aborting\n", m_szLandmarkName);
@@ -1766,10 +1767,18 @@ void NextLevel()
 class CLadder : public CBaseTrigger
 {
 public:
+	bool KeyValue(KeyValueData* pkvd) override;
 	void Spawn() override;
 	void Precache() override;
 };
 LINK_ENTITY_TO_CLASS(func_ladder, CLadder);
+
+
+// The original's (SDK 2.3; halflife-updated's seed dropped it): only passes it on.
+bool CLadder::KeyValue(KeyValueData* pkvd) // orig 0x11bc70
+{
+	return CBaseTrigger::KeyValue(pkvd);
+}
 
 //=========================================================
 // func_ladder - makes an area vertically negotiable
@@ -1803,9 +1812,17 @@ class CTriggerPush : public CBaseTrigger
 {
 public:
 	void Spawn() override;
+	bool KeyValue(KeyValueData* pkvd) override;
 	void Touch(CBaseEntity* pOther) override;
 };
 LINK_ENTITY_TO_CLASS(trigger_push, CTriggerPush);
+
+
+// The original's (SDK 2.3; halflife-updated's seed dropped it): only passes it on.
+bool CTriggerPush::KeyValue(KeyValueData* pkvd) // orig 0x11bda0
+{
+	return CBaseTrigger::KeyValue(pkvd);
+}
 
 /*QUAKED trigger_push (.5 .5 .5) ? TRIG_PUSH_ONCE
 Pushes the player
@@ -2256,6 +2273,8 @@ void CTriggerCamera::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE
 	}
 	if (!pActivator || !pActivator->IsPlayer())
 	{
+		// halflife-updated's fix, kept: returns when slot 1 holds no player (f2c8e23); the original
+		// dereferenced CBaseEntity::Instance(INDEXENT(1)), null for a free slot
 		pActivator = UTIL_GetLocalPlayer();
 
 		if (!pActivator)
@@ -2386,6 +2405,8 @@ void CTriggerCamera::FollowTarget()
 	if (dy > 180)
 		dy = dy - 360;
 
+	// halflife-updated's fix, kept: avelocity is per second and the engine applies the frame time,
+	// so the original's * frametime applied it twice (91944d1)
 	pev->avelocity.x = dx * 40 * 0.01;
 	pev->avelocity.y = dy * 40 * 0.01;
 
