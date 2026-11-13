@@ -32,7 +32,8 @@ Two sources besides the binary:
 A fork of `goldsrc-net/halflife-updated` branch `64bit-demo`, like mod-rockcrowbar.
 
 - `upstream` = `git@github.com:goldsrc-net/halflife-updated.git`, tracked by `main`.
-- `origin` = `git@github.com:goldsrc-net/oz-deathmatch.git`, private (`../REPOS.md`).
+- `origin` = `git@github.com:goldsrc-net/oz-deathmatch.git`, public since the v3.2.1 release (2026-11-12).
+  The original libraries are not in it (`reference/README.md`).
 
 | Path | What |
 |---|---|
