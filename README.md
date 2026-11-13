@@ -9,9 +9,9 @@ download nothing.
 
 This reconstruction is not affiliated with or endorsed by AfterShock Productions. Oz Deathmatch, its
 name, models, sounds and configs are theirs; this replaces only the code. AfterShock released the
-OZ 1.7 source on the terms that modifications are not released under the Oz name and that what is
-used is credited, so this repository is a private reconstruction, not a release of OZ. See
-[CREDITS.md](CREDITS.md).
+OZ 1.7 source on the terms that modifications of it are not distributed as new versions of Oz
+Deathmatch and that what is used is credited. This rebuilds 3.02 itself, not a new version, and
+credits what it took from 1.7. See [CREDITS.md](CREDITS.md).
 
 ## Installing
 

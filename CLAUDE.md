@@ -23,7 +23,8 @@ the same in mod-rc2 and mod-rockcrowbar.
 Two sources besides the binary:
 - the OZ 1.7 source (nekonomicon/OZDM on GitHub, AfterShock's own release): real names and
   code for what survived into 3.x; every OZ change in it is marked `// Oz`. Its licence asks for
-  credit to Oz Deathmatch and no release of modifications under the Oz name.
+  credit to Oz Deathmatch and that modifications aren't distributed as new versions of Oz; a
+  reconstruction of 3.02 packaged as `reOZ` is fine by that (Steven, 2026-11-12).
 - `reference/mp_i386.so` (3.0, pgcc 2.91.66): the release before 3.02, for diffs.
 
 ## This repo
