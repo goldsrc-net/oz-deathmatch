@@ -55,7 +55,8 @@ unpacked `oz/` folder as `OZ_SRC`.
   functions halflife-updated moved). Builds for Linux i386, amd64, aarch64 and Win32 here (Win64
   only in CI, with MSVC), packaged as `reOZ-<rev>` under 3.02's file names; the packaged i386 and
   Win32 servers boot a map on ReHLDS and on the Windows HLDS under Wine
-  (`tools/rig/boot-package.sh`). CI is off on this repo until Steven turns it on (`../REPOS.md`).
+  (`tools/rig/boot-package.sh`). CI is on (2026-11-12); its first run passed
+  every job, its Linux libraries are byte-identical to local builds, and its MSVC Win32 server boots the same way.
 - Runs: on the rig, ours and the original boot, load their cfgs and RhoBot, and change map; their
   smoke logs differ only as `reference/DEVIATIONS.md` says (engine-registered cvars,
   halflife-updated's extra cvars, server.cfg run once). Steven has played ours on the rig.

@@ -17,7 +17,9 @@ download nothing.
    64-bit servers.
 3. On Linux, `oz/liblist.gam` needs `gamedll_linux "dlls/hl_i386.so"`. The Steam package's
    `liblist.gam` names only the Windows `mp.dll`; its `liblist.gam_OLD`, the one 3.02 shipped, has
-   the line. A Windows server needs no change.
+   the line. A Windows server needs no change. A 64-bit ReHLDS loads that line as written, so on
+   one, point it at `dlls/hl_amd64.so` (x86-64) or `dlls/hl_arm64.so` (ARM) instead; Xash3D finds
+   the 64-bit name from the line by itself.
 4. Start the server with `-game oz`.
 
 `runfolder` in `oz/cfg/rhobot.cfg` (shipped as `oz`) is where the bots look for `bots/` and `nav/`.
