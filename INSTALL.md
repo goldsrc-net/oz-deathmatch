@@ -1,6 +1,6 @@
 # Installing
 
-The rebuild replaces one thing of an Oz Deathmatch 3.02 server: its game library. Everything else (the
+The rebuild replaces an Oz Deathmatch 3.02 server's game library and its `liblist.gam`. Everything else (the
 `cfg/` files, per-map cfgs, bots, nav files, the models, sounds and maps) is 3.02's own and stays as it
 is. Players need nothing new: OZ has no client library, so they join with Half-Life's client and
 download nothing.
@@ -14,12 +14,12 @@ download nothing.
    `scripts/package.sh`, [BUILDING.md](BUILDING.md)) over the server's `oz/`. It holds the server under
    3.02's own names: `dlls/hl.so`, `hl_i386.so` and `hl_i686.so` for Linux (Steam's current engine
    loads `hl.so`, older ones `hl_i386.so`, Metamod-R `hl_i686.so`), `dlls/mp.dll` for Windows, and the
-   64-bit servers.
-3. On Linux, `oz/liblist.gam` needs `gamedll_linux "dlls/hl_i386.so"`. The Steam package's
-   `liblist.gam` names only the Windows `mp.dll`; its `liblist.gam_OLD`, the one 3.02 shipped, has
-   the line. A Windows server needs no change. A 64-bit ReHLDS loads that line as written, so on
-   one, point it at `dlls/hl_amd64.so` (x86-64) or `dlls/hl_arm64.so` (ARM) instead; Xash3D finds
-   the 64-bit name from the line by itself.
+   64-bit servers, and 3.02's own `liblist.gam` (the Steam package's `liblist.gam_OLD`), whose
+   `gamedll_linux "dlls/hl_i386.so"` the Linux engines need: the Steam package's `liblist.gam` names
+   only the Windows `mp.dll`, and the 3.0 Linux server's names 3.0's `mp_i386.so`.
+3. A 64-bit ReHLDS loads `gamedll_linux` as written, so on one, point it at `dlls/hl_amd64.so`
+   (x86-64) or `dlls/hl_arm64.so` (ARM) instead; Xash3D finds the 64-bit name from the line by
+   itself.
 4. Start the server with `-game oz`.
 
 `runfolder` in `oz/cfg/rhobot.cfg` (shipped as `oz`) is where the bots look for `bots/` and `nav/`.
@@ -27,7 +27,7 @@ The server writes nav files there at map change, so the folder must be writable 
 
 Going back: put the original `hl_i386.so` (the 3.02 Linux update, `oz_3.02.tar.gz`) and `mp.dll` back
 in `oz/dlls/`, and delete `hl.so`, `hl_i686.so` and the 64-bit servers, which 3.02 never had (Steam's
-engine would go on loading `hl.so`). On a current system the original only loads with egcs 1.1.2's C++
+engine would go on loading `hl.so`). The new `liblist.gam` can stay; it names the original's files. On a current system the original only loads with egcs 1.1.2's C++
 runtime, `libstdc++-libc6.1-1.so.2`, on its library path (`tools/rig/setup.sh` fetches it); the
 rebuild needs nothing.
 

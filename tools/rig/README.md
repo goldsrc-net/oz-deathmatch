@@ -61,8 +61,8 @@ diff <(tools/rig/smoke.py --clean orig.log) <(tools/rig/smoke.py --clean ours.lo
 package's server (BUILDING.md, Packaging) under its shipped name and passes when it answers a server
 query on port 27045. `win` runs `mp.dll` in the Windows HLDS under Wine (`HLDS_WIN`, a Windows HLDS
 install, e.g. fetched with steamcmd as app 90 for platform windows), `linux` the i386 server on this
-rig. It makes an `oz-boot` gamedir there and removes it after. A Linux run needs 3.02's own
-liblist.gam (`LIBLIST=<its liblist.gam_OLD>`), since the Steam package's names only `mp.dll`.
+rig. It makes an `oz-boot` gamedir there and removes it after, and runs with the package's
+liblist.gam (3.02's own).
 
 ## Undo
 

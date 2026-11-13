@@ -42,7 +42,8 @@ On Windows, MSVC builds the same from the same CMake files: `cmake -B build -A W
 
 `scripts/package.sh` builds the i386 and Win32 servers at the current commit and lays out `reOZ-<rev>`
 in `dist/`: a patch for a stock 3.02 install, the server under 3.02's own file names (`oz/dlls/hl.so`,
-`hl_i386.so`, `hl_i686.so` and `mp.dll`; the README.txt in it says which engine loads which), with a
+`hl_i386.so`, `hl_i686.so` and `mp.dll`; the README.txt in it says which engine loads which) and 3.02's
+own `liblist.gam`, which names them, with a
 MANIFEST.tsv of sha256s, and a zip of the lot. It refuses a tree with uncommitted changes, so a package
 is a commit; `<rev>` is the `v*` tag from `git describe`, or the commit. The Linux libraries are
 stripped to their dynamic exports. `scripts/package.sh --debug` builds the Debug profile instead, not

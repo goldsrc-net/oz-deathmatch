@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # assemble-dropin.sh — lay out the reOZ patch for a stock Oz Deathmatch 3.02 install from binaries that
-# are already built. Oz Deathmatch 3.02 is the base; the patch replaces only the libraries, under the
-# original's own file names, so its liblist.gam keeps working unchanged. Used by scripts/package.sh
-# (local builds) and by CI's package job (its artifacts).
+# are already built. Oz Deathmatch 3.02 is the base; the patch replaces the libraries, under the
+# original's own file names, and liblist.gam with 3.02's full one, which names them (README.txt says
+# why). Used by scripts/package.sh (local builds) and by CI's package job (its artifacts).
 #
 # Usage: scripts/assemble-dropin.sh [--debug] [--amd64 <server.so>] [--arm64 <server.so>]
 #            [--win64 <server.dll>] <rev> <i386-server.so> <win32-server.dll> <outdir>
@@ -19,9 +19,10 @@
 #                                                   take from liblist.gam; README.txt says which)
 #   oz/dlls/mp.dll                                  the server, Win32 (liblist's gamedll)
 #   oz/dlls/hl_amd64.so hl_arm64.so mp_amd64.dll    64-bit servers (--amd64/--arm64/--win64)
+#   oz/liblist.gam                                  3.02's own (the Steam package's liblist.gam_OLD)
 set -euo pipefail
 
-usage() { sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 # What this mod's install looks like.
 PKG_NAME=reOZ
@@ -31,12 +32,26 @@ HAS_CLIENT=0
 SERVER_SO=(hl.so hl_i386.so hl_i686.so)   # the first is stripped, the rest are copies of it
 SERVER_DLL=mp.dll
 SERVER_AMD64=hl_amd64.so; SERVER_ARM64=hl_arm64.so; SERVER_WIN64=mp_amd64.dll
-LIBLIST=""
-NAMES_NOTE='The server is installed as hl.so, hl_i386.so and hl_i686.so because the engines pick different
-names from 3.02'\''s liblist.gam (gamedll_linux "dlls/hl_i386.so", as the 3.02 Linux update shipped it):
-Steam'\''s current Linux engine loads hl.so (it cuts the name at the first "_"), older engines load
-hl_i386.so, and Metamod-R prefers hl_i686.so. Windows loads mp.dll. The 3.02 Steam server package'\''s
-liblist.gam names only mp.dll; a Linux server needs the gamedll_linux line above added to it.
+# 3.02's full liblist.gam, as the Steam server package keeps it in liblist.gam_OLD (CRLF there).
+LIBLIST='// Oz
+game "Oz DM 3.02"
+url_info "www.planethalflife.com/oz/"
+url_dl "www.planethalflife.com/oz/download.shtml"
+version "3.02"
+size "4751600"
+svonly "1"
+hlversion "1110"
+type "multiplayer_only"
+mpentity "info_player_deathmatch"
+gamedll "dlls\mp.dll"
+gamedll_linux "dlls/hl_i386.so"
+'
+NAMES_NOTE='The patch'\''s liblist.gam is 3.02'\''s own, the one the Steam server package keeps as
+liblist.gam_OLD. The installs it goes over name no Linux server or an old one: the Steam package'\''s
+liblist.gam names only mp.dll, and the 3.0 Linux server'\''s names 3.0'\''s mp_i386.so. The server is
+installed as hl.so, hl_i386.so and hl_i686.so because the engines pick different names from its
+gamedll_linux "dlls/hl_i386.so": Steam'\''s current Linux engine loads hl.so (it cuts the name at the
+first "_"), older engines load hl_i386.so, and Metamod-R prefers hl_i686.so. Windows loads mp.dll.
 OZ has no client library; players use Half-Life'\''s own.'
 RESTART_CLIENT=''
 X64_EXTRA=''
