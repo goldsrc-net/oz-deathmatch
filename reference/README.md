@@ -3,6 +3,10 @@
 Source-of-truth binaries from the original mod, kept for reconstructing the game library as C++ on
 this SDK. Reference only, not linked into any build.
 
+The original libraries themselves are not in this repository: they are their authors' work. Put
+them here, under the names below (the checksums say which files), before running the scripts and
+the test rig that read them; the Provenance section lists the archives they come from. `.gitignore` keeps them out of commits.
+
 | File | What it is |
 |---|---|
 | `hl_i386.so` | 3.02, Linux 32-bit server library, egcs 1.1.2 (egcs-2.91.66), **not stripped**: 6,969 function symbols with names and addresses, and the names of the 95 source files it was built from. The library to reconstruct. |
@@ -35,4 +39,4 @@ The 3.02 Windows DLL in the Win32 update and in the Steam package are byte-ident
 The OZ 1.7 source the page links (FilePlanet's `Oz17src.zip`, gone) is mirrored on GitHub as
 nekonomicon/OZDM: AfterShock Productions' own release, every OZ change marked
 `// Oz`. Its readme gives everyone use of it on two terms: credit Oz Deathmatch for what is used,
-and don't release modifications under the Oz name.
+and don't distribute modifications of it as new versions of Oz Deathmatch.

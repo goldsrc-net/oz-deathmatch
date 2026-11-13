@@ -23,3 +23,8 @@ __pycache__/
 
 # scripts/package.sh output
 dist/
+
+# The original mod's own libraries (reference/README.md): not ours to publish
+/reference/hl_i386.so
+/reference/mp.dll
+/reference/mp_i386.so

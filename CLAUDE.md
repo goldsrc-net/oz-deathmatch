@@ -37,7 +37,7 @@ A fork of `goldsrc-net/halflife-updated` branch `64bit-demo`, like mod-rockcrowb
 | Path | What |
 |---|---|
 | `game/oz/` | the mod's gamedir manifest (`liblist.gam`) |
-| `reference/` | the original libraries and everything derived from them (`reference/README.md`); `RECONSTRUCTION.md` the work list, `DEVIATIONS.md`, `ORIGINAL_BUGS.md`, `dossiers/` one per package |
+| `reference/` | the original libraries (gitignored: fetch them, `reference/README.md`) and everything derived from them; `RECONSTRUCTION.md` the work list, `DEVIATIONS.md`, `ORIGINAL_BUGS.md`, `dossiers/` one per package |
 | `docs/` | `SERVER.md` (every cvar, command, impulse, file), `GAMEPLAY.md` (every change from Half-Life); `tutorials/` is Half-Life Updated's |
 | `scripts/` | `build.sh` (Linux, buildchain image), `build-win.sh` (Win32, clang-cl + xwin), `package.sh` and `assemble-dropin.sh` (the `reOZ-<rev>` patch, BUILDING.md), `check_file.py`, `check_docs.py` (SERVER.md covers every cvar and command), `check_clientdata.py`, `oz_touch.py`, the table generators from mod-rockcrowbar (`inventory`, `hierarchy`, `vtables`, `savefields`, `cvars`, `sdk_baseline`), `ghidra/` (`re.sh`; `ApplyRC.java` with VPTR 0x60) |
 | `.github/workflows/` | `ci-cd.yml` (every arch, then the package), `release.yml` (a `v*` tag cuts a release) |
