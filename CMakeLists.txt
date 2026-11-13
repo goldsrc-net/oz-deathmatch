@@ -13,6 +13,12 @@ project(HalfLifeMod
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+if(WIN32)
+	enable_language(RC)
+endif()
+set(MOD_PRODUCT "reOZ")
+include(cmake/Version.cmake)
+
 # Disable the use of absolute paths in library paths even in development builds.
 set(CMAKE_SKIP_BUILD_RPATH ON)
 
@@ -132,6 +138,8 @@ endfunction()
 
 add_subdirectory(cl_dll)
 add_subdirectory(dlls)
+
+mod_version_resource(hl mp.dll "reOZ server (Oz Deathmatch 3.02)")
 
 # Set Visual Studio starting project
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT client)

@@ -15,9 +15,10 @@ used is credited, so this repository is a private reconstruction, not a release 
 
 ## Installing
 
-The rebuild is a server library for a stock 3.02 install: put `hl.so` in `oz/dlls/` and point
-`gamedll_linux` in `oz/liblist.gam` at it. [INSTALL.md](INSTALL.md) covers servers, the test setup
-that runs the original and the rebuild side by side, and going back.
+The rebuild is a server library for a stock 3.02 install, packaged as `reOZ-<rev>`: its `oz/` folder
+goes over the server's, with the server under 3.02's own names (`hl_i386.so` and its aliases for
+Linux, `mp.dll` for Windows) and the 64-bit builds. [INSTALL.md](INSTALL.md) covers servers, the test
+setup that runs the original and the rebuild side by side, and going back.
 
 ## Servers
 
@@ -31,8 +32,9 @@ keeps, are in [reference/ORIGINAL_BUGS.md](reference/ORIGINAL_BUGS.md).
 ## Building
 
 The Linux libraries build in the [goldsrc-net/buildchain](https://github.com/goldsrc-net/buildchain)
-Docker image (`scripts/build.sh i386`, `scripts/build.sh amd64`). [BUILDING.md](BUILDING.md) has the
-steps.
+Docker image (`scripts/build.sh i386|amd64|aarch64`), the Win32 one with clang-cl on Linux
+(`scripts/build-win.sh`) or MSVC, and `scripts/package.sh` packages them. CI builds every arch and the
+package on each push. [BUILDING.md](BUILDING.md) has the steps.
 
 ## How it was made
 

@@ -38,8 +38,9 @@ A fork of `goldsrc-net/halflife-updated` branch `64bit-demo`, like mod-rockcrowb
 | `game/oz/` | the mod's gamedir manifest (`liblist.gam`) |
 | `reference/` | the original libraries and everything derived from them (`reference/README.md`); `RECONSTRUCTION.md` the work list, `DEVIATIONS.md`, `ORIGINAL_BUGS.md`, `dossiers/` one per package |
 | `docs/` | `SERVER.md` (every cvar, command, impulse, file), `GAMEPLAY.md` (every change from Half-Life); `tutorials/` is Half-Life Updated's |
-| `scripts/` | `build.sh`, `check_file.py`, `check_docs.py` (SERVER.md covers every cvar and command), `oz_touch.py`, the table generators from mod-rockcrowbar (`inventory`, `hierarchy`, `vtables`, `savefields`, `cvars`, `sdk_baseline`), `ghidra/` (`re.sh`; `ApplyRC.java` with VPTR 0x60) |
-| `tools/rig/` | the original and ours side by side on the HLDS rig, and `smoke.py` (`tools/rig/README.md`) |
+| `scripts/` | `build.sh` (Linux, buildchain image), `build-win.sh` (Win32, clang-cl + xwin), `package.sh` and `assemble-dropin.sh` (the `reOZ-<rev>` patch, BUILDING.md), `check_file.py`, `check_docs.py` (SERVER.md covers every cvar and command), `check_clientdata.py`, `oz_touch.py`, the table generators from mod-rockcrowbar (`inventory`, `hierarchy`, `vtables`, `savefields`, `cvars`, `sdk_baseline`), `ghidra/` (`re.sh`; `ApplyRC.java` with VPTR 0x60) |
+| `.github/workflows/` | `ci-cd.yml` (every arch, then the package), `release.yml` (a `v*` tag cuts a release) |
+| `tools/rig/` | the original and ours side by side on the HLDS rig, `smoke.py`, and `boot-package.sh` (a package's server on the Windows or Linux engine) (`tools/rig/README.md`) |
 
 Original content: the 3.02 Steam server package (`oz3-02_for_steam.zip`), from the sparksonline.org
 mirror the official download page links (`reference/README.md`). `tools/rig/setup.sh` takes its
@@ -50,7 +51,10 @@ unpacked `oz/` folder as `OZ_SRC`.
 - Reconstructed: all seven packages (bots, player, rules, items, weapons-a, weapons-b, world) are
   merged. 2,762 of the original's 2,786 functions are matched by name in our build; the other 24
   are explained in their dossiers (statics today's compiler inlines, names the demangler misses,
-  functions halflife-updated moved). Both arches build.
+  functions halflife-updated moved). Builds for Linux i386, amd64, aarch64 and Win32 here (Win64
+  only in CI, with MSVC), packaged as `reOZ-<rev>` under 3.02's file names; the packaged i386 and
+  Win32 servers boot a map on ReHLDS and on the Windows HLDS under Wine
+  (`tools/rig/boot-package.sh`). CI is off on this repo until Steven turns it on (`../REPOS.md`).
 - Runs: on the rig, ours and the original boot, load their cfgs and RhoBot, and change map; their
   smoke logs differ only as `reference/DEVIATIONS.md` says (engine-registered cvars,
   halflife-updated's extra cvars, server.cfg run once). Steven has played ours on the rig.
