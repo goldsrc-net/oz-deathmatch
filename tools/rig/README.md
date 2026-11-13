@@ -59,11 +59,10 @@ diff <(tools/rig/smoke.py --clean orig.log) <(tools/rig/smoke.py --clean ours.lo
 
 `tools/rig/boot-package.sh win|linux <package>/oz <3.02's oz folder> <map>` boots a `reOZ-<rev>`
 package's server (BUILDING.md, Packaging) under its shipped name and passes when it answers a server
-query on port 27045. `win` runs `mp.dll` in the Windows HLDS under Wine (`HLDS_WIN`, default
-`/media/Data3/Projects/goldsrc.net/hlds-win`, the one mod-ts fetches with steamcmd), `linux` the i386
-server on this rig. It makes an `oz-boot` gamedir there and removes it after. A Linux run needs
-3.02's own liblist.gam (`LIBLIST=<its liblist.gam_OLD>`), since the Steam package's names only
-`mp.dll`.
+query on port 27045. `win` runs `mp.dll` in the Windows HLDS under Wine (`HLDS_WIN`, a Windows HLDS
+install, e.g. fetched with steamcmd as app 90 for platform windows), `linux` the i386 server on this
+rig. It makes an `oz-boot` gamedir there and removes it after. A Linux run needs 3.02's own
+liblist.gam (`LIBLIST=<its liblist.gam_OLD>`), since the Steam package's names only `mp.dll`.
 
 ## Undo
 
